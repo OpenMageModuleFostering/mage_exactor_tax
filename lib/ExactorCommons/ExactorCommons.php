@@ -530,6 +530,7 @@ class ExactorDigitalSignatureBuilder{
     private function appendInvoiceFields($invoice){
         if ($invoice == null) return;
         $this->appendValue($invoice->getSaleDate());
+        $this->appendValue($invoice->getExemptionId());
         $this->appendAddressFields($invoice->getShipTo());
         $this->appendAddressFields($invoice->getShipFrom());
         if ($invoice->getLineItems() == null) return;

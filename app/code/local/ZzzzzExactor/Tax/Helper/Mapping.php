@@ -1,10 +1,10 @@
 <?php
+
 /**
  * User: LOGICIFY\corvis
  * Date: 4/20/12
  * Time: 1:12 PM
  */
-
 class ZzzzzExactor_Tax_Helper_Mapping extends Mage_Core_Helper_Abstract
 {
 
@@ -506,8 +506,13 @@ class ZzzzzExactor_Tax_Helper_Mapping extends Mage_Core_Helper_Abstract
     {
         $exemptionId = '';
         if ($merchantSettings->getExemptionsSupported()) {
-            $customerExemptionId = $quoteAddress->getQuote()->getCustomer()->getData(self::ATTRIBUTE_NAME_EXEMPTION);
-            if ($customerExemptionId != null) $exemptionId = $customerExemptionId;
+            $customer = $quoteAddress->getQuote()->getCustomer();
+            $customerExemptionId = $customer->getData(self::ATTRIBUTE_NAME_EXEMPTION);
+            if ($customerExemptionId != null) {
+                $exemptionId = $customerExemptionId;
+            } else {
+                $exemptionId = $customer->getId();
+            }
         }
         return $exemptionId;
     }
@@ -522,8 +527,13 @@ class ZzzzzExactor_Tax_Helper_Mapping extends Mage_Core_Helper_Abstract
     {
         $exemptionId = '';
         if ($merchantSettings->getExemptionsSupported()) {
-            $customerExemptionId = $creditMemo->getOrder()->getCustomerTaxvat();
-            if ($customerExemptionId != null) $exemptionId = $customerExemptionId;
+            $order = $creditMemo->getOrder();
+            $customerExemptionId = $order->getCustomerTaxvat();
+            if ($customerExemptionId != null) {
+                $exemptionId = $customerExemptionId;
+            } else {
+                $exemptionId = $order->getCustomerId();
+            }
         }
         return $exemptionId;
     }
@@ -539,7 +549,11 @@ class ZzzzzExactor_Tax_Helper_Mapping extends Mage_Core_Helper_Abstract
         $exemptionId = '';
         if ($merchantSettings->getExemptionsSupported()) {
             $customerExemptionId = $order->getCustomerTaxvat();
-            if ($customerExemptionId != null) $exemptionId = $customerExemptionId;
+            if ($customerExemptionId != null) {
+                $exemptionId = $customerExemptionId;
+            } else {
+                $exemptionId = $order->getCustomerId();
+            }
         }
         return $exemptionId;
     }
@@ -679,10 +693,10 @@ class ZzzzzExactor_Tax_Helper_Mapping extends Mage_Core_Helper_Abstract
     /**
      * Calculates prorated shipping and handling amounts for partial payments \ refunds.
      *
-     * @param $orderedShippingAmount        - total shipping amount from the order. Typically getOrder()->getBaseShippingAmount()
-     * @param $alreadyProcessedAmount       - a part of shipping amount that was already processed, for instance $creditMemo->getOrder()->getBaseShippingRefunded()
-     * @param $targetShippingAmount         - shipping amount to process, e.g. $invoice->getBaseShippingAmount()
-     * @param $handlingTotalAmount          - total handling amount
+     * @param $orderedShippingAmount - total shipping amount from the order. Typically getOrder()->getBaseShippingAmount()
+     * @param $alreadyProcessedAmount - a part of shipping amount that was already processed, for instance $creditMemo->getOrder()->getBaseShippingRefunded()
+     * @param $targetShippingAmount - shipping amount to process, e.g. $invoice->getBaseShippingAmount()
+     * @param $handlingTotalAmount - total handling amount
      * @param Mage_Core_Model_Store $store
      * @return array (shipping amount, handling amount)
      */
@@ -937,8 +951,8 @@ class ZzzzzExactor_Tax_Helper_Mapping extends Mage_Core_Helper_Abstract
     {
         if ($address == null || !$address->hasData()) return false;
         return strlen(trim($address->getStreet1())) > 0
-            && strlen(trim($address->getFullName())) > 0
-            && strlen(trim($address->getCity())) > 0;
+        && strlen(trim($address->getFullName())) > 0
+        && strlen(trim($address->getCity())) > 0;
     }
 
     /**

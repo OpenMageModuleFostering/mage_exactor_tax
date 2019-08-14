@@ -23,7 +23,7 @@ define('EXACTOR_CONFIG_ALWAYS_OVERRIDE_TAX', 'always-override-tax');
 
 /* Initializing factories */
 ExactorLoggingFactory::getInstance()->setup('MagentoLogger', IExactorLogger::DEBUG);
-ExactorConnectionFactory::getInstance()->setup('Magento','20141030');
+ExactorConnectionFactory::getInstance()->setup('Magento','20141204');
 ExactorProcessingServiceFactory::getInstance()->setup(new MagentoExactorCallback());
 
 /* Initializing configuration object */
