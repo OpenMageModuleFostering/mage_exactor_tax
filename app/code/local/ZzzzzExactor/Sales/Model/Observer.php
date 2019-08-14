@@ -362,6 +362,7 @@ class ZzzzzExactor_Sales_Model_Observer
             $taxPercent += $taxInfo->getTaxRate();
         }
         $taxPercent *= 100;
+        $taxPercent = (float)$resultItem->getTotalTaxAmount() ? $taxPercent : 0;
         $quoteItem->setTaxPercent($taxPercent);
     }
 

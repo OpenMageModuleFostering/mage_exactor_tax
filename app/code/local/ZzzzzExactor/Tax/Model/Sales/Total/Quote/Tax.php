@@ -120,7 +120,7 @@ class ZzzzzExactor_Tax_Model_Sales_Total_Quote_Tax extends Mage_Sales_Model_Quot
         //parent::collect($address);
         $this->_setAddress($address);
         if (count($address->getAllItems()) <= 0) return; // Skip addresses without items
-        if ($address->getId() == null) return; // Skip if there is no address
+        if ($address->getId() == null && !trim($address->getPostcode())) return; // Skip if there is no address
         //$this->_setAmount(0);
         //$this->logger->trace('Called for address #' . $address->getId() . ' (' . $address->getAddressType() . ')','collect');
         $merchantSettings = $this->loadMerchantSettings($address);
@@ -257,6 +257,7 @@ class ZzzzzExactor_Tax_Model_Sales_Total_Quote_Tax extends Mage_Sales_Model_Quot
             $taxPercent += $taxInfo->getTaxRate();
         }
         $taxPercent *= 100;
+        $taxPercent = (float)$resultItem->getTotalTaxAmount() ? $taxPercent : 0;
         $quoteItem->setTaxPercent($taxPercent);
     }
 
