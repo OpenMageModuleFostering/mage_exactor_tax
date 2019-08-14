@@ -34,7 +34,7 @@ class Exactor_Tax_Helper_Mapping extends Mage_Core_Helper_Abstract {
 
     const ATTRIBUTE_NAME_EXEMPTION = 'taxvat';
 
-    const MAX_SKU_CODE_LENGTH = 16;
+    const MAX_SKU_CODE_LENGTH = 32;
 
     private $logger;
 
@@ -171,7 +171,7 @@ class Exactor_Tax_Helper_Mapping extends Mage_Core_Helper_Abstract {
                 if ($taxClass == null) $sku = ''; else $sku = $taxClass->getClassName();
                 break;
         }
-        return substr($sku, self::PRICE_TYPE_DYNAMIC, self::MAX_SKU_CODE_LENGTH); // Max length for SKU is 16 characters
+        return substr($sku, self::PRICE_TYPE_DYNAMIC, self::MAX_SKU_CODE_LENGTH); // Max length for SKU is 32 characters
     }
 
     private function isUSPSShipping($methodName){

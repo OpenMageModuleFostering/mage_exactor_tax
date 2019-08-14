@@ -16,7 +16,7 @@ define('EXACTOR_CONFIG_FEATURE_DISABLE_ESTIMATES', 'disable-estimates');
 
 /* Initializing factories */
 ExactorLoggingFactory::getInstance()->setup('MagentoLogger', IExactorLogger::DEBUG);
-ExactorConnectionFactory::getInstance()->setup('Magento','20140226');
+ExactorConnectionFactory::getInstance()->setup('Magento','20140304');
 ExactorProcessingServiceFactory::getInstance()->setup(new MagentoExactorCallback());
 
 /* Initializing configuration object */
