@@ -54,13 +54,23 @@ class Exactor_ExactorSettings_Block_Form extends Mage_Core_Block_Template {
                        ));
     }
 
+    private function dateForView($dateStr){
+        $timestamp = strtotime($dateStr);
+        return date("m/d/Y", $timestamp);
+    }
+
     /**
      * Load settings object for template
      * This method always will return MerchantSettings object even if there are no any settings in DB
      * @return void
      */
     protected function loadMerchantSettings(){
-        return $this->exactorSettingsHelper->loadMerchantSettingsOrEmptyObject($this->getStoreViewId());
+        $settings = $this->exactorSettingsHelper->loadMerchantSettingsOrEmptyObject($this->getStoreViewId());
+        if (trim($settings->getEffectiveDate())==""){
+            $settings->setEffectiveDate($settings->getDefaultEffectiveDate());
+        }
+        $settings->setEffectiveDate($this->dateForView($settings->getEffectiveDate()));
+        return $settings;
     }
 
     public function setStoreViewId($storeViewId)

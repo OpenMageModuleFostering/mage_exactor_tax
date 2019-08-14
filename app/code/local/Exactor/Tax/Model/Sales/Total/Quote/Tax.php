@@ -61,6 +61,7 @@ class Exactor_Tax_Model_Sales_Total_Quote_Tax extends Mage_Sales_Model_Quote_Add
         require_once($libDir . '/XmlProcessing.php');
         require_once($libDir . '/ExactorDomainObjects.php');
         require_once($libDir . '/ExactorCommons.php');
+        require_once($libDir . '/RegionResolver.php');
         // Magento specific definitions
         require_once($libDir . '/Magento.php');
         require_once($libDir . '/config.php');
@@ -89,7 +90,7 @@ class Exactor_Tax_Model_Sales_Total_Quote_Tax extends Mage_Sales_Model_Quote_Add
      * @param Mage_Sales_Model_Quote_Address $address
      * @return Exactor_Core_Model_MerchantSettings
      */
-    public function loadMerchantSettings(Mage_Sales_Model_Quote_Address $address=null){
+    public function loadMerchantSettings($address=null){
         $storeViewId = $address->getQuote()->getStoreId();//Mage::app()->getStore()->getId();
         return $this->exactorSettingsHelper->loadValidMerchantSettings($storeViewId);
     }
@@ -116,21 +117,35 @@ class Exactor_Tax_Model_Sales_Total_Quote_Tax extends Mage_Sales_Model_Quote_Add
         if (count($address->getAllItems())<=0) return; // Skip addresses without items
         if ($address->getId() == null) return; // Skip if there is no address
         //$this->_setAmount(0);
-        $this->logger->trace('Called for address #' . $address->getId() . ' (' . $address->getAddressType() . ')','collect');
+        //$this->logger->trace('Called for address #' . $address->getId() . ' (' . $address->getAddressType() . ')','collect');
         $merchantSettings = $this->loadMerchantSettings($address);
 
-        if ($merchantSettings == null){
-            $this->applyTax(0);
-            $this->logger->info(self::LOG_MESSAGE_TAX_CALC_FAILED . 'Missing or invalid Merchant Settings. Pass request to internal Mage tax calc. system', 'collect');
-            $internalTaxCalculator = Mage::getSingleton("Mage_Tax_Model_Sales_Total_Quote_Tax");
+        $internalTaxCalculator = Mage::getSingleton("Mage_Tax_Model_Sales_Total_Quote_Tax");
+        if ($merchantSettings == null) {
+            /*$this->applyTax(0);
+            $this->resetTaxForItems($address);*/
+            $this->logger->info(self::LOG_MESSAGE_TAX_CALC_FAILED . ' Missing or invalid Merchant Settings. Pass request to internal Mage tax calc. system', 'collect');
             return $internalTaxCalculator->collect($address);
             //return $this->processTaxCalculationFail('Missing or invalid Merchant Settings');
         }
-
         // Preparing Exactor Invoice Request
-        $invoiceRequest = $this->exactorMappingHelper->buildInvoiceRequestForQuoteAddress($address, $merchantSettings, $this->isMultishippingRequest());
+        $invoiceRequest = $this->exactorMappingHelper->buildInvoiceRequestForQuoteAddress($address, $merchantSettings, $this->isMultishippingRequest(), $this->isEstimation());
+        // Check request filter if it is enabled
+        $config = ExactorPluginConfig::getInstance();
+        if ($config->getFeatureConfig()->isFeatureEnabled(EXACTOR_CONFIG_FEATURE_TRN_FILTER)) {
+            if (!$this->exactorMappingHelper->isAllowedLocation($config->get(EXACTOR_CONFIG_TRN_FILTER), $address)) {
+                $this->logger->info('Rejected by Exactor filter. Skipping tax calculation. Internal tax calculation will be used instead.', 'collect');
+                return $internalTaxCalculator->collect($address);
+            }
+        }
         $this->logger->trace('Invoice ' . serialize($invoiceRequest),'collect');
         if ($invoiceRequest != null && $this->checkIfCalculationNeeded($invoiceRequest, $merchantSettings)){
+            if ($config->getFeatureConfig()->isFeatureEnabled(EXACTOR_CONFIG_FEATURE_DISABLE_ESTIMATES)) {
+                if (!$this->exactorMappingHelper->isInvoiceAddressesFullyPopulated($invoiceRequest)) {
+                    $this->logger->info('Skipping tax estimate due to the Exactor plug-in configuration', 'collect');
+                    return $internalTaxCalculator->collect($address);
+                }
+            }
             // Sending to Exactor Tax Calculation Request to Exactor
             $exactorProcessingService = ExactorProcessingServiceFactory::getInstance()->buildExactorProcessingService($merchantSettings->getMerchantID(),
                                                                                   $merchantSettings->getUserID());
@@ -144,11 +159,14 @@ class Exactor_Tax_Model_Sales_Total_Quote_Tax extends Mage_Sales_Model_Quote_Add
                     return $this->processTaxCalculationFail($msg);
                 }else{
                     $invoiceResponse = $exactorResponse->getFirstInvoice();
-                    if ($invoiceResponse!=null)
+                    if ($invoiceResponse!=null){
                         $calculatedTax = $invoiceResponse->getTotalTaxAmount();
+                        $this->applyTaxForItems($address, $invoiceResponse);
+                    }
                 }
             }catch(Exception $e){ // Critical Exactor communication error - Network timeout for instance
                 $this->applyTax(0);
+                $this->resetTaxForItems($address);
                 $this->logger->error(self::LOG_MESSAGE_TAX_CALC_FAILED . $e->getMessage(), 'collect');
                 $this->session->addError($e->getMessage());
             }
@@ -157,10 +175,92 @@ class Exactor_Tax_Model_Sales_Total_Quote_Tax extends Mage_Sales_Model_Quote_Add
             $address->setBaseTaxAmount($calculatedTax);
         }else{
             $this->applyTax($address->getTaxAmount());
+            // For some reason shipping tax is 0 on this point
+            // We can't fetch it from the anywhere because we don't store any amounts,
+            // Thus the only solution for us - to calculate it. It's a little bit hacky way...
+            /**
+             * @var Mage_Sales_Model_Quote_Item $item
+             */
+            $shippingTax = $address->getTaxAmount();
+            foreach ($address->getAllItems() as $item) {
+                $shippingTax -= $item->getTaxAmount();
+            }
+            $shippingTax = Mage::app()->getStore()->roundPrice($shippingTax);
+            // The following code is workaraund for the bug in Magento 1.6.2 - Tax applied to the QuoteAddress object
+            // can be missed by Magento for some reason. This issue can be reproduced in very trickily manner:
+            // 1. login
+            // 2. add product to the cart
+            // 3. logout
+            // 4. login again
+            // 5. proceed to purchase
+            // 6. select FREE SHIPPING
+            // 7. tax will be zero in front-end, negative in fact. The reason - $address->getTaxAmount() will return 0,
+            //    while line items still contains valid tax
+            // IMPORTANT: Issue can be reproduced only once per session (first attempt), thus you should clear cookies before login.
+            if ($shippingTax < 0){
+                $this->applyTax(-1 * $shippingTax);
+                $shippingTax = 0;
+            }
+            //
+            $address->setShippingTaxAmount($shippingTax);
+            $address->setBaseShippingTaxAmount($shippingTax);
         }
         return $this;
     }
 
+
+    /**
+     * Returns true is request is just tax estimation
+     * @return bool
+     */
+    private function isEstimation()
+    {
+        return strpos($this->session->getLastUrl(), "estimatePost") != false
+                || strpos($this->session->getLastUrl(),"estimateUpdatePost") != false;
+    }
+
+    /**
+     * Set tax amount for each item
+     * @param \Mage_Sales_Model_Quote_Address $address
+     * @param InvoiceResponseType $invoice
+     * @return void
+     */
+    private function applyTaxForItems(Mage_Sales_Model_Quote_Address $address, InvoiceResponseType $invoice){
+        $i = 0;
+        /**
+         * @var Mage_Sales_Model_Quote_Item $item
+         */
+        foreach ($address->getAllItems() as $item){
+            $taxResultItem = $invoice->getItemById($this->exactorMappingHelper->buildExactorItemId($item));
+            // If there is no item in response - set tax to 0
+            if ($taxResultItem==null){
+                $item->setTaxAmount(0);
+                $item->setBaseTaxAmount(0);
+            }else{  // Else - Apply tax to the item
+                $item->setTaxAmount($taxResultItem->getTotalTaxAmount());
+                $item->setBaseTaxAmount($taxResultItem->getTotalTaxAmount());
+            }
+        }
+        // Set Shipping + handling tax
+        $totalShippingTax = 0;
+        $shippingTaxItem = $invoice->getItemById(Exactor_Tax_Helper_Mapping::LINE_ITEM_ID_SHIPPING);
+        $handlingTaxItem = $invoice->getItemById(Exactor_Tax_Helper_Mapping::LINE_ITEM_ID_HANDLING);
+        if ($shippingTaxItem != null) $totalShippingTax+=$shippingTaxItem->getTotalTaxAmount();
+        if ($handlingTaxItem != null) $totalShippingTax+=$handlingTaxItem->getTotalTaxAmount();
+        $address->setShippingTaxAmount($totalShippingTax);
+        $address->setBaseShippingTaxAmount($totalShippingTax);
+    }
+
+    private function resetTaxForItems(Mage_Sales_Model_Quote_Address $address){
+        /**
+         * @var Mage_Sales_Model_Quote_Item $item
+         */
+        foreach ($address->getAllItems() as $item){
+            $item->setTaxAmount(0);
+            $item->setBaseTaxAmount(0);
+        }
+        $address->setShippingTaxAmount(0);
+    }
 
     private function applyTax($amount){
         $this->_setBaseAmount($amount);
@@ -175,6 +275,7 @@ class Exactor_Tax_Model_Sales_Total_Quote_Tax extends Mage_Sales_Model_Quote_Add
      */
     private function checkIfCalculationNeeded($invoiceRequest, $merchantSettings){
         // Calculating digital signature for the current request
+        if ($invoiceRequest == null || $invoiceRequest->getLineItems() == null) return false;
         $taxRequest = ExactorConnectionFactory::getInstance()->buildRequest($merchantSettings->getMerchantID(), $merchantSettings->getUserID());
         $taxRequest->addInvoiceRequest($invoiceRequest);
         $signatureBuilder = new ExactorDigitalSignatureBuilder();

@@ -25,6 +25,7 @@ class ExactorTransactionInfo{
     private $createdDate;
     private $lastModifiedDate;
     private $signature;
+    private $invoiceTrn=null;
 
     public function setCreatedDate($createdDate)
     {
@@ -104,6 +105,16 @@ class ExactorTransactionInfo{
     public function getSignature()
     {
         return $this->signature;
+    }
+
+    public function setInvoiceTrn($invoiceTrn)
+    {
+        $this->invoiceTrn = $invoiceTrn;
+    }
+
+    public function getInvoiceTrn()
+    {
+        return $this->invoiceTrn;
     }
 
 }
@@ -205,9 +216,8 @@ class AddressType extends XmlSerializationSupport {
      */
     public function hasData(){
         return //strlen(trim($this->getStreet1()))
-              // && strlen(trim($this->getCity()))
-               strlen(trim($this->getPostalCode()))
-               && strlen(trim($this->getStateOrProvince()));
+              // && strlen(trim($this->getCity())) 
+            strlen(trim($this->getPostalCode()));
     }
 }
 
@@ -216,16 +226,17 @@ class LineItemType extends XmlSerializationSupport {
     public $SKU;
     public $Description;
     public $Quantity=1;
-    public $GrossAmount;
+    public $GrossAmount=0;
     public $BillTo;
     public $ShipTo;
     public $ShipFrom;
-    /**
-     * @var string
-     * @xmlName id
-     * @xmlAttribute
-     */
     public $id;
+
+    protected function defineBindingRules()
+    {
+        $this->setBindingRulesFor('id')->xmlName('id')->toXmlAttribute();
+    }
+
 
     public function setBillTo(AddressType $BillTo)
     {
@@ -334,24 +345,18 @@ class InvoiceRequestType extends XmlSerializationSupport {
     public $TaxDirection;
     public $TaxClass;
     public $ExemptionId;
-    /**
-     * @var AddressType
-     */
     public $BillTo;
-    /**
-     * @var AddressType
-     */
     public $ShipTo;
-    /**
-     * @var AddressType
-     */
     public $ShipFrom;
-    /**
-     * @var array LineItemType
-     * @xmlName LineItem
-     */
     public $LineItems;
 
+    protected function defineBindingRules()
+    {
+        $this->setBindingRulesFor('BillTo')->objectType('AddressType');
+        $this->setBindingRulesFor('ShipTo')->objectType('AddressType');
+        $this->setBindingRulesFor('ShipFrom')->objectType('AddressType');
+        $this->setBindingRulesFor('LineItems')->objectType('array LineItemType')->xmlName('LineItem');
+    }
 
     /**
      * @param \AddressType $BillTo
@@ -398,7 +403,7 @@ class InvoiceRequestType extends XmlSerializationSupport {
     }
 
     /**
-     * @return
+     * @return LineItemType[]
      */
     public function getLineItems()
     {
@@ -483,7 +488,7 @@ class InvoiceRequestType extends XmlSerializationSupport {
 
     /**
      * @param LineItemType|null $lineItem
-     * @return
+     * @return void
      */
     public function addLineItem($lineItem){
         if ($lineItem==null) return;
@@ -495,12 +500,13 @@ class InvoiceRequestType extends XmlSerializationSupport {
 class CommitRequestType extends XmlSerializationSupport {
     public $CommitDate;
     public $InvoiceNumber;
-    /**
-     * @var InvoiceRequestType
-     */
     public $InvoiceRequest;
     public $PriorTransactionId;
 
+    protected function defineBindingRules()
+    {
+        $this->setBindingRulesFor('InvoiceRequest')->objectType('InvoiceRequestType');
+    }
 
     /**
      * @param DateTime $CommitDate
@@ -599,13 +605,12 @@ class ResponseLineItem extends XmlSerializationSupport{
     public $TaxDirection;
     public $TotalTaxAmount;
     public $TaxInfo;
-    /**
-     * @var
-     * @xmlName id
-     * @xmlAttribute
-     */
     public $id;
 
+    protected function defineBindingRules()
+    {
+        $this->setBindingRulesFor('id')->xmlName('id')->toXmlAttribute();
+    }
 
     public function setGrossAmount($GrossAmount)
     {
@@ -676,11 +681,12 @@ class InvoiceResponseType extends XmlSerializationSupport{
     public $GrossAmount;
     public $TotalTaxAmount;
     public $TaxObligation;
-    /**
-     * @var array ResponseLineItem
-     * @xmlName LineItem
-     */
     public $LineItems;
+
+    protected function defineBindingRules()
+    {
+        $this->setBindingRulesFor('LineItems')->objectType('array ResponseLineItem')->xmlName('LineItem');
+    }
 
 
     public function setCurrencyCode($CurrencyCode)
@@ -808,6 +814,20 @@ class InvoiceResponseType extends XmlSerializationSupport{
     {
         return $this->TransactionId;
     }
+
+    /**
+     * @param $id
+     * @return null|ResponseLineItem
+     */
+    public function getItemById($id){
+        /**
+         * @var $item ResponseLineItem
+         */
+        foreach($this->getLineItems() as $item){
+            if ($item->getId() == $id) return $item;
+        }
+        return null;
+    }
 }
 
 class CommitResponseType extends XmlSerializationSupport{
@@ -815,11 +835,13 @@ class CommitResponseType extends XmlSerializationSupport{
     public $TransactionDate;
     public $CommitDate;
     public $InvoiceNumber;
-    /**
-     * @var InvoiceResponseType
-     */
     public $InvoiceResponse;
     public $PriorTransactionId;
+
+    protected function defineBindingRules()
+    {
+        $this->setBindingRulesFor('InvoiceResponse')->objectType('InvoiceResponseType');
+    }
 
     public function setCommitDate($CommitDate)
     {
@@ -1028,15 +1050,11 @@ class ErrorResponseType extends XmlSerializationSupport {
 }
 /* ========================= REQUEST\RESPONSE ======================== */
 
-/**
- * @xmlName TaxRequest
- */
 class TaxRequestType extends XmlSerializationSupport {
     protected function getNamespace()
     {
         return 'http://www.exactor.com/ns';
     }
-
 
     /**
      * @var string
@@ -1084,12 +1102,21 @@ class TaxRequestType extends XmlSerializationSupport {
     public $DeleteRequests = array();
 
     /* =========== ATTRIBUTES ============== */
-    /**
-     * @var string
-     * @xmlName version
-     * @xmlAttribute
-     */
+
     public $pluginVersion='';
+
+    protected function defineBindingRules()
+    {
+        $this->setBindingRulesFor('$this')->xmlName('TaxRequest');
+        $this->setBindingRulesFor('pluginVersion')->xmlName('version')->toXmlAttribute();
+        $this->setBindingRulesFor('pluginName')->xmlName('plugin')->toXmlAttribute();
+
+        $this->setBindingRulesFor('InvoiceRequests')->objectType('array InvoiceRequestType')->xmlName('InvoiceRequest');
+        $this->setBindingRulesFor('CommitRequests')->objectType('array CommitRequestType')->xmlName('CommitRequest');
+        $this->setBindingRulesFor('RefundRequests')->objectType('array RefundRequestType')->xmlName('RefundRequest');
+        $this->setBindingRulesFor('DeleteRequests')->objectType('array DeleteRequestType')->xmlName('DeleteRequest');
+        $this->setBindingRulesFor('ErrorRequests')->objectType('array ErrorRequestType')->xmlName('ErrorRequest');
+    }
 
     /**
      * @var string
@@ -1283,51 +1310,24 @@ class TaxRequestType extends XmlSerializationSupport {
 }
 
 class TaxResponseType extends XmlSerializationSupport{
-    /**
-     * @var string
-     * @xmlName MerchantId
-     */
     public $MerchantId;
-    /**
-     * @var string
-     * @xml UserId
-     */
     public $UserId;
-
-    /**
-     * @var string
-     */
     public $PartnerId;
-
-    /**
-     * @var array InvoiceResponseType
-     * @xmlName InvoiceResponse
-     */
     public $InvoiceResponses;
-
-    /**
-     * @var array CommitResponseType
-     * @xmlName CommitResponse
-     */
     public $CommitResponses;
-
-    /**
-     * @var array RefundResponseType
-     * @xmlName RefundResponse
-     */
     public $RefundResponses;
-
-    /**
-     * @var array DeleteResponseType
-     * @xmlName DeleteResponse
-     */
     public $DeleteResponses;
-
-    /**
-     * @var array ErrorResponseType
-     * @xmlName ErrorResponse
-     */
     public $ErrorResponses;
+
+    protected function defineBindingRules()
+    {
+        $this->setBindingRulesFor('InvoiceResponses')->objectType('array InvoiceResponseType')->xmlName('InvoiceResponse');
+        $this->setBindingRulesFor('CommitResponses')->objectType('array CommitResponseType')->xmlName('CommitResponse');
+        $this->setBindingRulesFor('RefundResponses')->objectType('array RefundResponseType')->xmlName('RefundResponse');
+        $this->setBindingRulesFor('DeleteResponses')->objectType('array DeleteResponseType')->xmlName('DeleteResponse');
+        $this->setBindingRulesFor('ErrorResponses')->objectType('array ErrorResponseType')->xmlName('ErrorResponse');
+
+    }
 
     /* ******** SOME SHORTCUTS *********** */
 
@@ -1356,6 +1356,15 @@ class TaxResponseType extends XmlSerializationSupport{
         if (!count($this->getInvoiceResponses())) return null;
         $invoices = $this->getInvoiceResponses();
         return $invoices[0];
+    }
+
+    /** Returns first InvoiceResponseType from the list or null if there are no any invoice responses
+     * @return InvoiceResponseType|null
+     */
+    public function getFirstCommit() {
+        if (!count($this->getCommitResponses())) return null;
+        $commits = $this->getCommitResponses();
+        return $commits[0];
     }
 
     /* ******** GETTERS AND SETTERS *********** */

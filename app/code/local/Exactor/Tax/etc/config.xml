@@ -28,7 +28,7 @@
 <config>
     <modules>
         <Exactor_Tax>
-            <version>2012.06.14</version>
+            <version>2012.12.05</version>
         </Exactor_Tax>
     </modules>
     <global>

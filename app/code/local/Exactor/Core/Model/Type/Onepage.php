@@ -1,4 +1,4 @@
-<?
+<?php
 
 class Exactor_Core_Model_Type_Onepage extends Mage_Checkout_Model_Type_Onepage{
     /** @var Mage_Core_Model_Session_Abstract */

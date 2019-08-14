@@ -216,6 +216,14 @@ class Exactor_Core_Model_MerchantSettings extends Mage_Core_Model_Abstract
         return $this->getData("CommitOption");
     }
 
+    function getEffectiveDate() {
+        return $this->getData("EffectiveDate");
+    }
+
+    function setEffectiveDate($EffectiveDate){
+        $this->setData("EffectiveDate", $EffectiveDate);
+    }
+
 
     function setCommitOption($CommitOption)
     {
@@ -260,6 +268,12 @@ class Exactor_Core_Model_MerchantSettings extends Mage_Core_Model_Abstract
             return $default;
     }
 
+    public  function getDefaultEffectiveDate() {
+        $date_array = getdate();
+        $timestamp = mktime(0,0,0,$date_array['mon'],1,$date_array['year']);
+        return date("Y-m-d", $timestamp);
+    }
+
     public function populateFromArray($array){
         $this->setCity($this->valueOrDefaultFromArray($array, 'City'));
         $this->setCommitOption($this->valueOrDefaultFromArray($array, 'CommitOption'));
@@ -275,5 +289,6 @@ class Exactor_Core_Model_MerchantSettings extends Mage_Core_Model_Abstract
         $this->setStoreViewID($this->valueOrDefaultFromArray($array, 'StoreViewID'));
         $this->setStreet1($this->valueOrDefaultFromArray($array, 'Street1'));
         $this->setStreet2($this->valueOrDefaultFromArray($array, 'Street2'));
+        $this->setEffectiveDate($this->valueOrDefaultFromArray($array, 'EffectiveDate'));
     }
 }

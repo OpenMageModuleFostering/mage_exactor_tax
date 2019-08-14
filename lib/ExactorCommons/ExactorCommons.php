@@ -145,13 +145,117 @@ class ExactorLoggingFactory{
     {
         return $this->logLevel;
     }
+}
+
+/* ******************************************************************/
+
+class ConfigHolder {
+    protected $_config;
+    public function __construct() {
+        $this->_config = array();
+    }
+
+    public function get($property, $default=null){
+        if (array_key_exists($property, $this->_config)){
+            return $this->_config[$property];
+        }
+    }
+
+    public function __sleep()
+    {
+        return array('_config');
+    }
+
+    public function set($property, $value){
+        $this->_config[$property]=$value;
+    }
+}
+
+class FeatureConfigHolder extends ConfigHolder {
+    public function __construct(){
+        parent::__construct();
+    }
+
+    public function enableFeature($featureName) {
+        $this->set('enable-' . $featureName, "true");
+    }
+
+    public function disableFeature($featureName) {
+        $this->set('enable-' . $featureName, "false");
+    }
+
+    public function isFeatureEnabled($featureName) {
+        return $this->get('enable-' . $featureName) == "true";
+    }
+}
 
 
+class FeatureConfigManager {
+    private $encriptionKey='';
+
+    /**
+     * Decodes config string and returns an object.
+     *
+     * @param $configString
+     * @return FeatureConfigHolder
+     */
+    public function readConfigFromString($configString) {
+        $obj = unserialize(base64_decode(preg_replace("/[\\s\\n]+/","",$configString)));
+        if ($obj == false)
+            return new FeatureConfigHolder();
+        else
+            return $obj;
+    }
+
+    /**
+     * Returns config encoded as string
+     * 
+     * @param FeatureConfigHolder $config
+     * @return string
+     */
+    public function encodeConfig(FeatureConfigHolder $config) {
+        $serialized = serialize($config);
+        return base64_encode($serialized);
+    }
+}
+
+class ExactorPluginConfig extends ConfigHolder {
+    private static $_instance;
+    private $featureConfig;
+
+    /**
+     * @static
+     * @return ExactorMagentoConfig
+     */
+    public static function getInstance(){
+        if (!isset(self::$_instance)) {
+            $className = __CLASS__;
+            self::$_instance = new $className;
+        }
+        return self::$_instance;
+    }
+
+    public function __construct() {
+        $this->config = array();
+        $this->featureConfig = new FeatureConfigHolder();
+    }
+
+    public function getFeatureConfig() {
+        return $this->featureConfig;
+    }
+
+    public function pushFeatureConfigString($configString) {
+        $configManager = new FeatureConfigManager();
+        $config = $configManager->readConfigFromString($configString);
+        if ($config) {
+            $this->featureConfig = $config;
+        }
+    }
 }
 
 /* ******************** EXACTOR CONNECTOR ***************************/
 
-class ExactorConnector{
+class ExactorConnector {
 
     private $endpointUrl='';
 
@@ -413,7 +517,7 @@ class ExactorDigitalSignatureBuilder{
      */
     private function appendAddressFields($address){
         if ($address == null) return;
-        $this->appendValue($address->getFullName());
+        //$this->appendValue($address->getFullName());
         $this->appendValue($address->getStreet1());
         $this->appendValue($address->getStreet2());
         $this->appendValue($address->getCity());
@@ -428,6 +532,7 @@ class ExactorDigitalSignatureBuilder{
         $this->appendValue($invoice->getSaleDate());
         $this->appendAddressFields($invoice->getShipTo());
         $this->appendAddressFields($invoice->getShipFrom());
+        if ($invoice->getLineItems() == null) return;
         foreach ($invoice->getLineItems() as $lineItem){
             $this->appendValue($lineItem->getGrossAmount());
         }
@@ -496,6 +601,21 @@ class ExactorProcessingService{
         $this->logger = ExactorLoggingFactory::getInstance()->getLogger($this);
     }
 
+    /**
+     * Applies address fallback logic(if needed).
+     * IMPORTANT: This method should be invoked AFTER all available address information was set in invoice obj.
+     *
+     * @param InvoiceRequestType $invoice
+     * @return void
+     */
+    public function applyAddressFallbackLogic($invoice) {
+        if ($invoice->getBillTo() == null && $invoice->getShipTo() == null) {
+            return;
+        }
+        if ($invoice->getShipTo() == null || !$invoice->getShipTo()->hasData()) {
+            $invoice->setShipTo($invoice->getBillTo());
+        }
+    }
 
     /**
      * Fires following events:
@@ -508,6 +628,7 @@ class ExactorProcessingService{
     public function calculateTax($invoiceRequest){
         $this->logger->trace('Composing and sending request with one Invoice','calculateTax');
         $request = ExactorConnectionFactory::getInstance()->buildRequest($this->merchantId, $this->userId, $this->partnerId);
+        $this->applyAddressFallbackLogic($invoiceRequest);
         $request->addInvoiceRequest($invoiceRequest);
         // Create signature
         $signatureBuilder = new ExactorDigitalSignatureBuilder();
@@ -534,7 +655,7 @@ class ExactorProcessingService{
      * @internal param $validationMessage
      * @return bool
      */
-    public function validateSettings(AddressType $address, ErrorResponseType &$errorObject){
+    public function validateSettings($address, $errorObject){
         $exactorConnector = ExactorConnectionFactory::getInstance();
         $request = ExactorConnectionFactory::getInstance()->buildRequest($this->merchantId, $this->userId, $this->partnerId);
         $invoiceRequest = new InvoiceRequestType();
@@ -559,7 +680,12 @@ class ExactorProcessingService{
         }
     }
 
-    private function createExactorTransactionInfoForInvoiceResponse(TaxResponseType $taxResponse, $signature){
+    /**
+     * @param TaxResponseType $taxResponse
+     * @param $signature
+     * @return ExactorTransactionInfo
+     */
+    private function createExactorTransactionInfoForInvoiceResponse($taxResponse, $signature){
         $invoiceResponse = $taxResponse->getFirstInvoice();
         $exactorResponse = new ExactorTransactionInfo();
         $exactorResponse->setCreatedDate($invoiceResponse->getTransactionDate());
@@ -635,7 +761,7 @@ class ExactorProcessingService{
         $response = ExactorConnectionFactory::getInstance()->buildExactorConnector()->sendRequest($request);
         // Do callback to the plugin
         if ($response->hasErrors()){
-            if ($response->getFirstError()->getErrorCode() == ErrorResponseType::ERROR_INVALID){
+            if ($response->getFirstError()->getErrorCode() == ErrorResponseType::ERROR_INVALID_COMMIT_DATE){
                 $commitRequest->setCommitDate(new DateTime());
                 $response = ExactorConnectionFactory::getInstance()->buildExactorConnector()->sendRequest($request);
                 if ($response->hasErrors()){
@@ -653,6 +779,73 @@ class ExactorProcessingService{
             $this->pluginCallback->onCommitSuccess($signature, $commitResponses[0], $commitRequest, null); // TODO: pass transaction info
         }
         return $response;
+    }
+
+    /**
+     * Just creates CommitRequestType and sends commit request to Exactor.
+     * If failed due to the invalid date - tries to use current one.
+     *
+     * @param InvoiceRequestType $invoiceRequest
+     * @param DateTime $date
+     * @param string $invoiceNumber
+     * @return TaxResponseType
+     */
+    private function commitNewInvoiceRequestObject(InvoiceRequestType $invoiceRequest, DateTime $date, $invoiceNumber="unknown") {
+        $commitRequest = new CommitRequestType();
+        $commitRequest->setCommitDate($date);
+        $commitRequest->setInvoiceNumber($invoiceNumber);
+        $this->applyAddressFallbackLogic($invoiceRequest);
+        $commitRequest->setInvoiceRequest($invoiceRequest);
+        $request = ExactorConnectionFactory::getInstance()->buildRequest($this->merchantId, $this->userId, $this->partnerId);
+        $request->addCommitRequest($commitRequest);
+        $response = ExactorConnectionFactory::getInstance()->buildExactorConnector()->sendRequest($request);
+        $signature='';
+        if ($response->hasErrors()) {
+            if ($response->getFirstError()->getErrorCode() == ErrorResponseType::ERROR_INVALID_COMMIT_DATE){
+                $commitRequest->setCommitDate(new DateTime());
+                $response = ExactorConnectionFactory::getInstance()->buildExactorConnector()->sendRequest($request);
+                if ($response->hasErrors()){
+                    $this->logger->error('Exactor Commit request failed. See debug info for details');
+                    $this->pluginCallback->onCommitFail($signature, $response->getFirstError(), $commitRequest);
+                }
+            }else{
+                $this->logger->error('Exactor Commit request failed. See debug info for details');
+                $this->pluginCallback->onCommitFail($signature, $response->getFirstError(), $commitRequest);
+            }
+        }else{
+            $commitResponses = $response->getCommitResponses();
+            $this->pluginCallback->onCommitSuccess($signature, $commitResponses[0], $commitRequest, null);
+        }
+        return $response;
+    }
+
+    /**
+     * Performs commit of the given invoice object is useful for partial payments.
+     * Basically just convenient method for committing transactions.
+     *
+     * @param InvoiceRequestType $invoiceRequest
+     * @param DateTime $date
+     * @param string $invoiceNumber
+     * @return TaxResponseType
+     */
+    public function partialPayment(InvoiceRequestType $invoiceRequest, DateTime $date, $invoiceNumber="unknown") {
+        return $this->commitNewInvoiceRequestObject($invoiceRequest, $date, $invoiceNumber);
+    }
+
+    /**
+     * Performs partial refund basing on the InvoiceRequest information.
+     * Basically it just negate all amounts in the given invoice transaction and commits it.
+     * @param InvoiceRequestType $invoiceRequest
+     * @param DateTime $date
+     * @param string $invoiceNumber
+     * @return TaxResponseType
+     */
+    public function partialRefund(InvoiceRequestType $invoiceRequest, DateTime $date, $invoiceNumber="unknown"){
+        // Negate all item amounts
+        foreach ($invoiceRequest->getLineItems() as $lineItem){
+            $lineItem->setGrossAmount(-1 * $lineItem->getGrossAmount());
+        }
+        return $this->partialPayment($invoiceRequest, $date, $invoiceNumber);
     }
 
     /**

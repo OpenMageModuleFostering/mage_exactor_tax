@@ -28,7 +28,7 @@
 <config>
     <modules>
         <Exactor_Core>
-            <version>2012.06.14</version>
+            <version>2012.07.17</version>
         </Exactor_Core>
     </modules>
     <global>

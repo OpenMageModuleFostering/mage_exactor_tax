@@ -35,6 +35,16 @@
     if ($accountSettings->getID() == null){
         $accountSettings->setStoreViewID($this->getStoreViewId());
     }
+    $stateId = $regionInfo = Mage::getModel('directory/region')->getCollection()
+                ->addFilter("code", $accountSettings->getStateOrProvince())
+                ->addFilter("country_id", $accountSettings->getCountry())
+                ->getFirstItem();
+    if ($stateId->hasData()) {
+        $stateId = $stateId->getRegionId();
+    } else {
+        $stateId = 0;
+    }
+
 ?>
 <div class="content-header">
     <table cellspacing="0" class="grid-header">
@@ -106,29 +116,9 @@
                     <td class="input-ele"><input class="input-text validate-length required-entry" maxlength="128" name="exactordetailsform[City]" value="<?php echo $accountSettings->getCity();?>"/></td>
                 </tr>
                 <tr>
-                    <td class="label"><?php echo $this->__('State Or Province')?> <span class="required">*</span></td>
-					<td class="input-ele">
-                        <select id="StateOrProvince_Id"  class="required-entry" name="exactordetailsform[StateOrProvinceId]" STYLE="width: 250px">
-							<option value=""><?php echo $this->__('Please select region, state or province') ?></option>
-						</select>
-                        <script type="text/javascript">
-                       //<![CDATA[
-                           $('StateOrProvince_Id').setAttribute('defaultValue',  "<?php echo $accountSettings->getStateOrProvince() ?>");
-                       //]]>
-                       </script>
-                        <input id="StateOrProvince" class="input-text validate-length"
-                               value="<?php echo $accountSettings->getStateOrProvince() ?>"
-                               maxlength="128" name="exactordetailsform[StateOrProvince]" />
-					</td>
-                </tr>
-				<tr>
-                    <td class="label"><?php echo $this->__('Postal Code')?> <span class="required">*</span></td>
-                    <td class="input-ele"><input class="input-text validate-zip required-entry" name="exactordetailsform[PostalCode]" value="<?php echo $accountSettings->getPostalCode();?>"/></td>
-                </tr>
-                <tr>
                     <td class="label"><?php echo $this->__('Country')?> <span class="required">*</span></td>
 					<td class="input-ele">
-						<select id="Country" class="required-entry" name="exactordetailsform[Country]" STYLE="width: 250px">
+						<select id="country" class="required-entry" name="exactordetailsform[Country]" STYLE="width: 250px">
 							<?php foreach ($country_lists as $country): ?>
 								<option value=<?php echo $country["value"] ?>
 									<?php if(($country["value"]==$accountSettings->getCountry()) || (trim($country["value"])=="US" && trim($accountSettings->getCountry())=="")): ?>
@@ -138,11 +128,55 @@
 						</select>
 					</td>
                 </tr>
+                <tr>
+                    <td class="label"><?php echo $this->__('State Or Province')?> <span class="required">*</span></td>
+					<td class="input-ele">
+                        <select id="StateOrProvince_Id"  class="required-entry" name="exactordetailsform[StateOrProvinceId]" STYLE="width: 250px">
+							<option value=""><?php echo $this->__('Please select region, state or province') ?></option>
+						</select>
+                        <script type="text/javascript">
+                       //<![CDATA[
+                           $('StateOrProvince_Id').setAttribute('defaultValue',  "<?php echo $stateId ?>");
+                       //]]>
+                       </script>
+                        <input id="StateOrProvince" class="input-text validate-length"
+                               value="<?php echo $accountSettings->getStateOrProvince() ?>"
+                               maxlength="128" name="exactordetailsform[StateOrProvince]" />
+					</td>
+                </tr>
+                <tr>
+                    <td class="label"><?php echo $this->__('Postal Code')?> <span class="required">*</span></td>
+                    <td class="input-ele"><input class="input-text validate-zip-international required-entry" name="exactordetailsform[PostalCode]" value="<?php echo $accountSettings->getPostalCode();?>"/></td>
+                </tr>
             </table>
         </fieldset>
         <h4 class="icon-head head-edit-form fieldset-legend"><?php echo $this->__('Plugin Settings')?></h4>
         <fieldset>
             <table cellspacing="0" class="form-list" width="100%">
+                <tr>
+                    <td class="label" style="width: 280px"><?php echo $this->__('Effective Date')?> <span class="required">*</span></td>
+					<td class="input-ele">
+                        <input id="EffectiveDate" class="required-entry input-text validate-date"
+                               value="<?php echo $accountSettings->getEffectiveDate(); ?>"
+                               name="exactordetailsform[EffectiveDate]" STYLE="width: 135px" />
+                        <script type="text/javascript">
+                            Calendar.setup({
+                                inputField: "EffectiveDate",
+                                ifFormat: "%m/%e/%y",
+                                showsTime: false,
+                                align: "Bl",
+                                singleClick : true
+                                });
+                        </script>
+					</td>
+                </tr>
+                <tr>
+                    <td colspan="2">
+                        <div style="margin-left: 5px; display: inline;">
+                            <strong>Note:</strong> Changing options below will not affect any existing orders.
+                        </div>
+                    </td>
+                </tr>
                 <tr>
                     <td class="label" style="width: 280px"><?php echo $this->__('Do shipping charges include handling fees')?> <span class="required">*</span></td>
 					<td class="input-ele">
@@ -202,13 +236,16 @@
         <tr>
             <td class="a-left">
                 <button id="saveBtn" onclick="editForm.submit();" class="scalable save" type="button"><span>Save Data</span></button>
+                <?php if ($accountSettings->getID() != null): ?>
+                <button id="clearSettingsBtn" onclick="clearExactorSettings();" class="scalable delete" type="button"><span>Clear Settings</span></button>
+                <?php endif ?>
             </td>
         </tr>
     </table>
 </div>
 
 <script type="text/javascript">
-    new RegionUpdater('Country', 'StateOrProvince', 'StateOrProvince_Id',
+    new RegionUpdater('country', 'StateOrProvince', 'StateOrProvince_Id',
         <?php echo $this->helper('directory')->getRegionJson() ?>);
     
     var editForm = new varienForm('edit_form');
@@ -275,6 +312,16 @@
 	{
         return this.replace(/(^\s*)|(\s*$)/g, "");
 	}
+
+    function clearExactorSettings() {
+        if (confirm("<?php echo $this->__('This action will remove currently saved settings and deactivate the plug-in for the selected store.\nPlease confirm clearing settings') ?>")) {
+            showLoading();
+            var params = "/action_del_settings/" + '<?php echo $accountSettings->getStoreViewID(); ?>/';
+            setLocation('<?php echo $this->getUrl('*/*/index', array('_secure' => true)); ?>key/<?php echo $this->getRequest()->getParam('key') ?>'+params);
+            return true;
+        }
+        return false;
+    }
 
     function switchStore(obj){
         var storeParam = obj.value ? 'storeview/'+obj.value + '/' : '';

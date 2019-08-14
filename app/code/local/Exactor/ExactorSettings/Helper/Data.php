@@ -51,7 +51,6 @@ class Exactor_ExactorSettings_Helper_Data extends Mage_Core_Helper_Abstract{
      * @return Exactor_Core_Model_MerchantSettings|null
      */
     function loadMerchantSettingsOrEmptyObject($storeViewId=null){
-        // TODO: Filter by store view id
         //if ($storeViewId == null) $storeViewId = 1; // 1 - ID of the default store view
         $merchantSettingsModel = Mage::getModel(self::MODEL_MERCHANT_SETTINGS);
         $merchantSettingsModel = $merchantSettingsModel
@@ -59,6 +58,15 @@ class Exactor_ExactorSettings_Helper_Data extends Mage_Core_Helper_Abstract{
                 ->addFilter('StoreViewID', $storeViewId)
                 ->getFirstItem();
         return $merchantSettingsModel;
+    }
+
+    function removeSettings($storeViewId) {
+        $merchantSettingsModel = $this->loadMerchantSettingsOrEmptyObject($storeViewId);
+        if ($merchantSettingsModel->getID() != null){
+            $merchantSettingsModel->delete();
+            return true;
+        }
+        return false;
     }
 
     /**

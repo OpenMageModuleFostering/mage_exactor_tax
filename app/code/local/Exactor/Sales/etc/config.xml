@@ -28,7 +28,7 @@
 <config>
 	<modules>
         <Exactor_Sales>
-            <version>2012.06.14</version>
+            <version>2012.10.19</version>
         </Exactor_Sales>
     </modules>
     <global>
@@ -60,7 +60,7 @@
                     </exactor_sales_observer>
                 </observers>
             </sales_order_creditmemo_refund>
-            <order_cancel_after>
+            <sales_order_payment_cancel>
                 <observers>
                     <exactor_sales_observer>
                         <type>singleton</type>
@@ -68,7 +68,7 @@
                         <method>handleCancelOrder</method>
                     </exactor_sales_observer>
                 </observers>
-            </order_cancel_after>
+            </sales_order_payment_cancel>
             <sales_order_shipment_save_after>
                 <observers>
                     <exactor_sales_observer>
@@ -78,7 +78,7 @@
                     </exactor_sales_observer>
                 </observers>
             </sales_order_shipment_save_after>
-            <sales_order_invoice_pay>
+            <sales_order_invoice_register>
                 <observers>
                     <exactor_sales_observer>
                         <type>singleton</type>
@@ -86,7 +86,23 @@
                         <method>handleNewInvoice</method>
                     </exactor_sales_observer>
                 </observers>
-            </sales_order_invoice_pay>
+            </sales_order_invoice_register>
+            <sales_order_invoice_cancel>
+                <observers>
+                    <exactor_sales_observer>
+                        <type>singleton</type>
+                        <class>Exactor_Sales_Model_Observer</class>
+                        <method>handleCancelInvoice</method>
+                    </exactor_sales_observer>
+                </observers>
+            </sales_order_invoice_cancel>
         </events>
+        <models>
+            <tax>
+                <rewrite>
+                    <sales_model_order_creditmemo_total_tax>Exactor_Sales_Model_Order_Creditmemo_Total_Tax</sales_model_order_creditmemo_total_tax>
+                </rewrite>
+            </tax>
+        </models>
     </global>
 </config>

@@ -54,6 +54,7 @@ class Exactor_ExactorSettings_Adminhtml_FormController extends Mage_Adminhtml_Co
         require_once($libDir . '/XmlProcessing.php');
         require_once($libDir . '/ExactorDomainObjects.php');
         require_once($libDir . '/ExactorCommons.php');
+        require_once($libDir . '/RegionResolver.php');
         // Magento specific definitions
         require_once($libDir . '/Magento.php');
         require_once($libDir . '/config.php');
@@ -65,6 +66,14 @@ class Exactor_ExactorSettings_Adminhtml_FormController extends Mage_Adminhtml_Co
             $this->loadLayout();
             $storeViewId = $this->getRequest()->getParam('storeview',Mage::app()->getDefaultStoreView()->getId());
             $this->getLayout()->getBlock('ExactorSettingsForm')->setStoreViewId($storeViewId);
+            // Additional Actions
+            if ($this->getRequest()->getParam('action_del_settings',null) != null) {
+                /** @var Exactor_ExactorSettings_Helper_Data $exactorSettingsHelper */
+                $exactorSettingsHelper = Mage::helper('ExactorSettings');
+                $exactorSettingsHelper->removeSettings($this->getRequest()->getParam('action_del_settings',null));
+                $this->sendSuccess("Successfully cleared settings");
+                return;
+            }
         }catch(Exception $e){
             Mage::log("$e");
         }
@@ -77,12 +86,25 @@ class Exactor_ExactorSettings_Adminhtml_FormController extends Mage_Adminhtml_Co
      * @param Exactor_Core_Model_MerchantSettings $merchantSettings
      * @return void
      */
-    protected function preprocessInput(&$merchantSettings){
+    protected function preprocessInput($merchantSettings){
         foreach($merchantSettings->getData() as $key => $value){
             if (is_string($value))
-                $merchantSettings->setData($key, trim($value));
+            $merchantSettings->setData($key, trim($value));
+        }
+        // Convert effective date from string or set default value
+        if ($merchantSettings->getEffectiveDate()==""){
+            $merchantSettings->setEffectiveDate($merchantSettings->getDefaultEffectiveDate());
+        } else {
+            $merchantSettings->setEffectiveDate($this->dateForDb($merchantSettings->getEffectiveDate()));
         }
     }
+
+    private function dateForDb($dateStr){
+        $timestamp = strtotime($dateStr);
+        return date("Y-m-d", $timestamp);
+    }
+
+
 
     private function sendRequestBack(){
         $storeviewId = $this->getRequest()->getParam('storeview',null);
@@ -139,7 +161,7 @@ class Exactor_ExactorSettings_Adminhtml_FormController extends Mage_Adminhtml_Co
         // Do validation
         $isInputValid = $this->validate($merchantSettings);
         // if valid - Save to DB
-        if ($isInputValid){
+        if ($isInputValid) {
             $merchantSettings->save();
             return $this->sendSuccess(self::MSG_SETTINGS_SAVED);
         }else{ // else - notify error

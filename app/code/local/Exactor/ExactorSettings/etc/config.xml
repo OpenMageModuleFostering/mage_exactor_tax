@@ -28,7 +28,7 @@
 <config>
     <modules>
         <Exactor_ExactorSettings>
-            <version>2012.06.14</version>
+            <version>2012.09.25</version>
         </Exactor_ExactorSettings>
     </modules>
 
@@ -77,7 +77,7 @@
     </admin>
 
     <adminhtml>
-        <translate>
+        <!--<translate>
             <modules>
                 <Exactor_adminhtml>
                     <files>
@@ -85,7 +85,7 @@
                     </files>
                 </Exactor_adminhtml>
             </modules>
-        </translate>
+        </translate>-->
 
         <menu>
             <system>

@@ -20,81 +20,171 @@
  * Date: 4/18/12
  * Time: 5:34 PM
  */
- 
-class XmlSerializationSupport {
 
-    const DOC_LINE_XML_NAME = '/@xmlName\s+([\w\d]+)\n/i';
-    const DOC_LINE_XML_VAR_TYPE = '/@var\s+([\w\d]+\s*[\w\d]*)/i';
-    const DOC_LINE_XML_ATTRIBUTE = '/@xmlAttribute\s*\n/i';
-    const DOC_LINE_XML_SKIP = '/@xmlSkip\s*\n/i';
+/**
+ * Class represents binding rules for a class property
+ * To assign binding rules to the class use '$this' as property name.
+ */
+class BindingRule {
+    private $serializationType = XmlSerializationSupport::SERIALIZE_TO_NODE;
+    private $xmlName = null;
+    private $type = null;
+
+    function __construct($propertyName)
+    {
+        // Xml name is a property name by default
+        $this->xmlName = $propertyName;
+    }
+
+    /**
+     * Property will be serialized to the xml node.
+     * Will be ignored on class level.
+     * @return BindingRule
+     */
+    public function toXmlNode() {
+        $this->serializationType = XmlSerializationSupport::SERIALIZE_TO_NODE;
+        return $this;
+    }
+
+    /**
+     * Property will be serialized to the xml attribute
+     * Will be ignored on class level.
+     * @return BindingRule
+     */
+    public function toXmlAttribute() {
+        $this->serializationType = XmlSerializationSupport::SERIALIZE_TO_ATTRIBUTE;
+        return $this;
+    }
+
+    /**
+     * Property will be excluded from XML processing
+     * @return BindingRule
+     */
+    public function skip() {
+        $this->serializationType = XmlSerializationSupport::SERIALIZE_TO_NOTHING;
+        return $this;
+    }
+
+    /**
+     * Define custom xml name. By default property name will be used.
+     * @param $name
+     * @return BindingRule
+     */
+    public function xmlName($name) {
+        $this->xmlName = $name;
+        return $this;
+    }
+
+    /**
+     * Defines class type associated with given property. It should be a class name or array of classes.
+     * Example: objectType('LineItem'); objectType('array LineItem')
+     * Will be ignored on class level.
+     * @param $className
+     * @return BindingRule
+     */
+    public function objectType($className) {
+        $this->type = $className;
+        return $this;
+    }
+
+    public function getSerializationType()
+    {
+        return $this->serializationType;
+    }
+
+    public function getXmlName()
+    {
+        return $this->xmlName;
+    }
+
+    public function getObjectType() {
+        return $this->type;
+    }
+}
+
+class XmlSerializationSupport {
     const SERIALIZE_TO_NOTHING = 0;
     const SERIALIZE_TO_NODE = 1;
     const SERIALIZE_TO_ATTRIBUTE = 2;
 
     const TYPE_ARRAY_MODIFIER = 'array';
 
+    private $mappingRules = array();
+    private $isBindingInitialized = false;
+    private $ignoreUnknownElements = true;
+
     protected function getNamespace(){
         return null;
     }
 
+    protected final function setBindingRulesFor($propertyName) {
+        $rule = new BindingRule($propertyName);
+        $this->mappingRules[$propertyName] = $rule;
+        return $rule;
+    }
+
+    protected final function getMappingRules($propertyName) {
+        if (array_key_exists($propertyName, $this->mappingRules)) {
+            return $this->mappingRules[$propertyName];
+        }
+        $rule = new BindingRule($propertyName);
+        return $rule;
+    }
+
+    /**
+     * This method should be overridden by children classes to define custom binding rules.
+     * Default implementation is empty.
+     * Typical usage is:
+     * $this->setBindingRulesFor('$this')->xmlName('MyXmlNodeName'); // Sets name for xml node of the class
+     * $this->setBindingRulesFor('myProperty1')->xmlName('MyProp'); // Sets name for xml element of the myProperty1
+     * $this->setBindingRulesFor('myProperty2')->xmlName('mp')  // Property 'myProperty2' will be serialized to the
+     *                                         ->toAttribute();       // attribute of the class with name 'mp'
+     */
+    protected function defineBindingRules() {
+
+    }
+
     /**Returns serialization action.
      * Node - by default
-     * Supported doc lines: @xmlAttribute, @xmlSkip
      * @param ReflectionProperty $property
      * @return bool
      */
-    protected function getSerializationType(ReflectionProperty $property){
-        $serializationAction = self::SERIALIZE_TO_NODE;
-        // is attribute?
-        if (preg_match(self::DOC_LINE_XML_ATTRIBUTE, $property->getDocComment(), $matches)>0){
-            $serializationAction = self::SERIALIZE_TO_ATTRIBUTE;
-        }else if(preg_match(self::DOC_LINE_XML_SKIP, $property->getDocComment(), $matches)>0){
-            $serializationAction = self::SERIALIZE_TO_NOTHING;
-        }
+    protected final function getSerializationType(ReflectionProperty $property){
+        $serializationAction = $this->getMappingRules($property->getName())->getSerializationType();
         return $serializationAction;
     }
 
     /**
-     * By default it will be just property name.
-     * If there is a DocComment with attribute @xmlName it will be used instead
+     * By default it will be just property name, unless special binding rule has been specified
      * @param ReflectionProperty $property
      * @return string XML Name for the property
      */
     protected function getTagNameForProperty(ReflectionProperty $property){
-        $name = $property->getName();
-        // Trying to parse DOC line of the property to gat valid name
-        if (preg_match(self::DOC_LINE_XML_NAME, $property->getDocComment(), $matches)>0){
-            if (count($matches)>1)
-                $name=$matches[1];
-        }
-        return trim($name);
+        return $this->getMappingRules($property->getName())->getXmlName();
     }
 
-    /** Class name by default.
-     *  If there is a DocComment with attribute @xmlName it will be used instead.
+    /**
+     * Class name by default.
+     * If there is a binding rule pointed to the '$this' field, XML name from that rule will be used instead
      * @param ReflectionClass $class
      * @return string
      * @see getTagNameForProperty
      */
     protected function getTagNameForClass(ReflectionClass $class){
-        $name = $class->getName();
-        // Trying to parse DOC line of the property to gat valid name
-        if (preg_match(self::DOC_LINE_XML_NAME, $class->getDocComment(), $matches)>0){
-            if (count($matches)>1)
-                $name=$matches[1];
+        $defaultName = $class->getName();
+        $bindingName = $this->getMappingRules('$this')->getXmlName();
+        if ($bindingName != '$this') {
+            return $bindingName;
         }
-        return trim($name);
+        return $defaultName;
     }
 
     protected function getTargetClassNameForProperty($property)
     {
-        $className=null;
-        if (preg_match(self::DOC_LINE_XML_VAR_TYPE, $property->getDocComment(), $matches)>0){
-            if (count($matches)>1){
-                $className=$matches[1];
-                if ((substr($className, 0, strlen(self::TYPE_ARRAY_MODIFIER)) === self::TYPE_ARRAY_MODIFIER)){
-                    $className = substr($className,strlen(self::TYPE_ARRAY_MODIFIER));
-                }
+        $className=$this->getMappingRules($property->getName())->getObjectType();
+        if ($className!=null){
+            if ((substr($className, 0, strlen(self::TYPE_ARRAY_MODIFIER)) === self::TYPE_ARRAY_MODIFIER)){
+                $className = substr($className,strlen(self::TYPE_ARRAY_MODIFIER));
             }
         }
         return trim($className);
@@ -102,11 +192,10 @@ class XmlSerializationSupport {
 
     protected function getIsArrayForProperty($property){
         $res = false;
-        if (preg_match(self::DOC_LINE_XML_VAR_TYPE, $property->getDocComment(), $matches)>0){
-            if (count($matches)>1){
-                if ((substr($matches[1], 0, strlen(self::TYPE_ARRAY_MODIFIER)) === self::TYPE_ARRAY_MODIFIER)){
-                    $res = true;
-                }
+        $className=$this->getMappingRules($property->getName())->getObjectType();
+        if ($className != null) {
+            if ((substr($className, 0, strlen(self::TYPE_ARRAY_MODIFIER)) === self::TYPE_ARRAY_MODIFIER)){
+                $res = true;
             }
         }
         return $res;
@@ -125,13 +214,14 @@ class XmlSerializationSupport {
     /**
      * Do some preprocessing before serialization, e.g. remove special characters
      * @param $value
-     * @return void
+     * @return string
      */
     protected function preprocessValue($value){
         return htmlspecialchars($value);
     }
 
     public function toSimpleXmlObject($simpleXmlObject=null){
+        $this->initializeBindingsIfNeeded();
         $reflectionObj =  new ReflectionObject($this);
         $className = $this->getTagNameForClass($reflectionObj);
         if ($simpleXmlObject==null)
@@ -173,10 +263,12 @@ class XmlSerializationSupport {
     }
 
     public function serializeToXML(){
+        $this->initializeBindingsIfNeeded();
         return $this->toSimpleXmlObject()->asXML();
     }
 
     public function readFromXmlString($xml){
+        $this->initializeBindingsIfNeeded();
         $this->populateWithSimpleXmlObject(simplexml_load_string($xml));
     }
 
@@ -192,7 +284,11 @@ class XmlSerializationSupport {
             if (trim($targetClass)==='') throw new Exception();
             $obj = new $targetClass;
         }catch (Exception $e){
-            throw new Exception("Can't instantiate class '$targetClass'. Please provide type annotation for element $xmlElement");
+            if ($this->ignoreUnknownElements) {
+                return null;
+            } else {
+                throw new Exception("Can't instantiate class '$targetClass'. Please provide type annotation for element $xmlElement");
+            }
         }
         if (!$this->isComplexSerializableObject($obj))
             throw new Exception("Class ($targetClass) is not a child of XmlSerializationSupport. Element $xmlElement");
@@ -202,9 +298,11 @@ class XmlSerializationSupport {
 
     /**
      * @param SimpleXMLElement $simpleXmlObject
+     * @throws Exception
      * @return void
      */
     public function  populateWithSimpleXmlObject($simpleXmlObject){
+        $this->initializeBindingsIfNeeded();
         $xmlArray = (array)$simpleXmlObject; // Array representation of the SimpleXMLElement
         $reflectionObj =  new ReflectionObject($this);
         $properties = $reflectionObj->getProperties();
@@ -251,6 +349,14 @@ class XmlSerializationSupport {
                 default:
                     throw new Exception('Unsupported Serialization action for property ' . $property->getName());
             }
+        }
+    }
+
+    private function initializeBindingsIfNeeded()
+    {
+        if (!$this->isBindingInitialized) {
+            $this->defineBindingRules();
+            $this->isBindingInitialized = true;
         }
     }
 }

@@ -37,6 +37,9 @@ class Exactor_Core_Helper_SessionCache extends Mage_Core_Helper_Abstract{
         return null;
     }
 
+    /**
+     * @return ExactorTransactionInfo
+     */
     public function popTransactionInfo(){
         $transactionsArray = $this->fetchAll();
         if (count($transactionsArray) == 0) return;
@@ -51,6 +54,7 @@ class Exactor_Core_Helper_SessionCache extends Mage_Core_Helper_Abstract{
      */
     public function clear(){
         $this->magentoSession->setExactorTransactionInfo(null);
+        $this->magentoSession->setExactorTransactionInfoArray(null);
     }
 
     /**
