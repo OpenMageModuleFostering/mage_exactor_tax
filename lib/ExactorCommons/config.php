@@ -23,7 +23,7 @@ define('EXACTOR_CONFIG_ALWAYS_OVERRIDE_TAX', 'always-override-tax');
 
 /* Initializing factories */
 ExactorLoggingFactory::getInstance()->setup('MagentoLogger', IExactorLogger::DEBUG);
-ExactorConnectionFactory::getInstance()->setup('Magento','20160616');
+ExactorConnectionFactory::getInstance()->setup('Magento','20170607');
 ExactorProcessingServiceFactory::getInstance()->setup(new MagentoExactorCallback());
 
 /* Initializing configuration object */
@@ -32,4 +32,4 @@ $config->pushFeatureConfigString('');
 
 /* Pushing parameters */
 $config->set(EXACTOR_CONFIG_EXEMPT_DISCOUNTS, array());
-//$config->set(EXACTOR_CONFIG_ALWAYS_OVERRIDE_TAX, true);
+$config->set(EXACTOR_CONFIG_ALWAYS_OVERRIDE_TAX, true);

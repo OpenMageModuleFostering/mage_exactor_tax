@@ -123,15 +123,4 @@
         </layout>
     </adminhtml>
 
-
-    <frontend>
-        <layout>
-            <updates>
-                <ExactorSettings>
-                    <file>exactoronestepcheckout.xml</file>
-                </ExactorSettings>
-            </updates>
-        </layout>
-    </frontend>
-
 </config>

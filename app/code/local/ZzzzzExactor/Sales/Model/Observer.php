@@ -414,24 +414,8 @@ class ZzzzzExactor_Sales_Model_Observer
         $this->logger->trace('called', 'handleNewCreditMemo');
         $merchantSettings = $this->loadMerchantSettings($observer->getCreditmemo()->getOrder());
         if ($merchantSettings == null) return;
-        // TODO: What about COMMIT on shipment
         if ($merchantSettings->getCommitOption() != ZzzzzExactor_Core_Model_MerchantSettings::COMMIT_NEVER) {
-            if ($merchantSettings->getCommitOption() == ZzzzzExactor_Core_Model_MerchantSettings::COMMIT_ON_SHIPMENT) {
-                $exactorTrnInfo = $this->exactorProcessingService->loadTransactionInfoByOrderId(
-                    $observer->getCreditmemo()->getOrder()->getIncrementId());
-                if ($exactorTrnInfo != null && $exactorTrnInfo->getIsCommited()) {
-                    try {
-                        $this->refundTransactionForOrder($observer->getCreditmemo()->getOrder(), $merchantSettings);
-                        $exactorTrnInfo->setIsCommited(false);
-                        $this->exactorProcessingService->getPluginCallback()
-                            ->saveTransactionInfo($exactorTrnInfo, $exactorTrnInfo->getSignature());
-                    } catch (Exception $e) {
-                        $this->logger->error("Can't refund credit memo", 'handleNewCreditMemo');
-                    }
-                }
-            } else {
-                $this->partialRefund($observer->getCreditmemo());
-            }
+            $this->partialRefund($observer->getCreditmemo());
         }
     }
 
