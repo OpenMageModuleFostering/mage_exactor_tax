@@ -534,7 +534,14 @@ class ExactorDigitalSignatureBuilder{
         $this->appendAddressFields($invoice->getShipFrom());
         if ($invoice->getLineItems() == null) return;
         foreach ($invoice->getLineItems() as $lineItem){
+            $this->appendValue($lineItem->getId());
+            $this->appendValue($lineItem->getSKU());
+            $this->appendValue($lineItem->getDescription());
+            $this->appendValue($lineItem->getQuantity());
             $this->appendValue($lineItem->getGrossAmount());
+            $this->appendAddressFields($lineItem->getShipFrom());
+            $this->appendAddressFields($lineItem->getBillTo());
+            $this->appendAddressFields($lineItem->getShipTo());
         }
     }
 

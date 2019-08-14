@@ -19,17 +19,29 @@
  * versions in the future. If you wish to customize Magento for your
  * needs please refer to http://www.magentocommerce.com for more information.
  *
- * @category   design_default
- * @package    Exactor
+ * @category   Exactor
+ * @Custom package    Exactor 
  * @copyright  Copyright (c) 2008 Irubin Consulting Inc. DBA Varien (http://www.varien.com)
  * @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  */
 -->
-
-<layout>
-    <exactorsettings_adminhtml_form_index>
-        <reference name="content">
-            <block type="ZzzzzExactor_ExactorSettings_Block_Form" name="ExactorSettingsForm" template="ExactorSettings/settingsform.phtml" />
-        </reference>
-    </exactorsettings_adminhtml_form_index>
-</layout>
+<config>
+	<modules>	 
+        <ZzzzzExactor_Tax>
+            <codePool>local</codePool>
+            <active>true</active>
+        </ZzzzzExactor_Tax>
+        <ZzzzzExactor_Core>
+            <codePool>local</codePool>
+            <active>true</active>
+        </ZzzzzExactor_Core>
+        <ZzzzzExactor_ExactorSettings>
+            <codePool>local</codePool>
+            <active>true</active>
+        </ZzzzzExactor_ExactorSettings>
+        <ZzzzzExactor_Sales>
+            <codePool>local</codePool>
+            <active>true</active>
+        </ZzzzzExactor_Sales>
+	</modules>
+</config>

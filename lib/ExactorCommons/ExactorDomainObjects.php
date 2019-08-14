@@ -600,6 +600,86 @@ class DeleteRequestType extends XmlSerializationSupport {
 
 /* ========================= Response Types ========================== */
 
+class TaxInfo extends XmlSerializationSupport {
+    public $AuthorityLevel;
+    public $AuthorityName;
+    public $CityOrCountyOrDistrict;
+    public $StateOrProvince;
+    public $Country;
+    public $TaxAmount;
+    public $TaxRate;
+
+    public function setAuthorityLevel($AuthorityLevel)
+    {
+        $this->AuthorityLevel = $AuthorityLevel;
+    }
+
+    public function getAuthorityLevel()
+    {
+        return $this->AuthorityLevel;
+    }
+
+    public function setAuthorityName($AuthorityName)
+    {
+        $this->AuthorityName = $AuthorityName;
+    }
+
+    public function getAuthorityName()
+    {
+        return $this->AuthorityName;
+    }
+
+    public function setCityOrCountyOrDistrict($CityOrCountyOrDistrict)
+    {
+        $this->CityOrCountyOrDistrict = $CityOrCountyOrDistrict;
+    }
+
+    public function getCityOrCountyOrDistrict()
+    {
+        return $this->CityOrCountyOrDistrict;
+    }
+
+    public function setCountry($Country)
+    {
+        $this->Country = $Country;
+    }
+
+    public function getCountry()
+    {
+        return $this->Country;
+    }
+
+    public function setStateOrProvince($StateOrProvince)
+    {
+        $this->StateOrProvince = $StateOrProvince;
+    }
+
+    public function getStateOrProvince()
+    {
+        return $this->StateOrProvince;
+    }
+
+    public function setTaxAmount($TaxAmount)
+    {
+        $this->TaxAmount = $TaxAmount;
+    }
+
+    public function getTaxAmount()
+    {
+        return $this->TaxAmount;
+    }
+
+    public function setTaxRate($TaxRate)
+    {
+        $this->TaxRate = $TaxRate;
+    }
+
+    public function getTaxRate()
+    {
+        return $this->TaxRate;
+    }
+}
+
 class ResponseLineItem extends XmlSerializationSupport{
     public $GrossAmount;
     public $TaxDirection;
@@ -610,7 +690,7 @@ class ResponseLineItem extends XmlSerializationSupport{
     protected function defineBindingRules()
     {
         $this->setBindingRulesFor('id')->xmlName('id')->toXmlAttribute();
-    }
+        $this->setBindingRulesFor('TaxInfo')->objectType('array TaxInfo')->xmlName('TaxInfo');}
 
     public function setGrossAmount($GrossAmount)
     {
@@ -637,6 +717,9 @@ class ResponseLineItem extends XmlSerializationSupport{
         $this->TaxInfo = $TaxInfo;
     }
 
+    /**
+     * @return TaxInfo[]
+     */
     public function getTaxInfo()
     {
         return $this->TaxInfo;

@@ -1,0 +1,94 @@
+<?xml version="1.0" ?>
+<!--
+/**
+ * Magento
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License (AFL 3.0)
+ * that is bundled with this package in the file LICENSE_AFL.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/afl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@magentocommerce.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade Magento to newer
+ * versions in the future. If you wish to customize Magento for your
+ * needs please refer to http://www.magentocommerce.com for more information.
+ *
+ * @category   Exactor
+ * @package    ZzzzzExactor_Tax
+ * @copyright  Copyright (c) 2008 Irubin Consulting Inc. DBA Varien (http://www.varien.com)
+ * @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ */
+-->
+<config>
+    <modules>
+        <ZzzzzExactor_Core>
+            <version>2012.07.17</version>
+        </ZzzzzExactor_Core>
+    </modules>
+    <global>
+        <models>
+            <checkout>
+                <rewrite>
+                    <type_onepage>ZzzzzExactor_Core_Model_Type_Onepage</type_onepage>
+                </rewrite>
+            </checkout>
+            <!-- Settings -->
+            <MerchantSettings>
+                <class>ZzzzzExactor_Core_Model_MerchantSettings</class>
+                <resourceModel>MerchantSettings_mysql4</resourceModel>
+            </MerchantSettings>
+            <MerchantSettings_mysql4>
+                <class>ZzzzzExactor_Core_Model_Mysql4</class>
+				<entities>
+					<MerchantSettings><table>exactor_account</table></MerchantSettings>
+				</entities>
+            </MerchantSettings_mysql4>
+            <!-- Transaction data -->
+            <ExactorTransaction>
+                <class>ZzzzzExactor_Core_Model_ExactorTransaction</class>
+                <resourceModel>ExactorTransaction_mysql4</resourceModel>
+            </ExactorTransaction>
+            <ExactorTransaction_mysql4>
+                <class>ZzzzzExactor_Core_Model_Mysql4</class>
+				<entities>
+					<ExactorTransaction><table>exactor_transaction_order</table></ExactorTransaction>
+				</entities>
+            </ExactorTransaction_mysql4>
+        </models>
+        <helpers>
+            <ZzzzzExactor_Core_SessionCache>
+                <class>ZzzzzExactor_Core_Helper_SessionCache</class>
+            </ZzzzzExactor_Core_SessionCache>
+        </helpers>
+        <resources>
+            <!-- Exactor Merchant Settings -->
+            <MerchantSettings_write>
+                <connection>
+                    <use>core_write</use>
+                </connection>
+            </MerchantSettings_write>
+            <MerchantSettings_read>
+                <connection>
+                    <use>core_read</use>
+                </connection>
+            </MerchantSettings_read>
+            <!-- Exactor Transaction Info -->
+            <ExactorTransaction_write>
+                <connection>
+                    <use>core_write</use>
+                </connection>
+            </ExactorTransaction_write>
+            <ExactorTransaction_read>
+                <connection>
+                    <use>core_read</use>
+                </connection>
+            </ExactorTransaction_read>
+        </resources>
+    </global>
+</config>

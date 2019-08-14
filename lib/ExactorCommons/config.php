@@ -14,9 +14,16 @@ define('EXACTOR_CONFIG_FEATURE_TRN_FILTER', 'trn-filter');
 
 define('EXACTOR_CONFIG_FEATURE_DISABLE_ESTIMATES', 'disable-estimates');
 
+/*
+ * Enable this option to always override tax in quotes instead of overriding only if quote checksum changes.
+ * Is useful in case if user installed other plug-ins overriding tax.
+ * WARNING: this option increases RAM memory consuming.
+ * */
+define('EXACTOR_CONFIG_ALWAYS_OVERRIDE_TAX', 'always-override-tax');
+
 /* Initializing factories */
 ExactorLoggingFactory::getInstance()->setup('MagentoLogger', IExactorLogger::DEBUG);
-ExactorConnectionFactory::getInstance()->setup('Magento','20140304');
+ExactorConnectionFactory::getInstance()->setup('Magento','20140905');
 ExactorProcessingServiceFactory::getInstance()->setup(new MagentoExactorCallback());
 
 /* Initializing configuration object */
@@ -25,3 +32,4 @@ $config->pushFeatureConfigString('');
 
 /* Pushing parameters */
 $config->set(EXACTOR_CONFIG_EXEMPT_DISCOUNTS, array());
+//$config->set(EXACTOR_CONFIG_ALWAYS_OVERRIDE_TAX, true);

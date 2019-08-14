@@ -16,13 +16,13 @@ class MagentoExactorCallback extends IExactorPluginCallback{
 
     private $logger;
     /**
-     * @var Exactor_Core_Helper_SessionCache
+     * @var ZzzzzExactor_Core_Helper_SessionCache
      */
     private $sessionCache;
 
     public function __construct(){
         $this->logger = ExactorLoggingFactory::getInstance()->getLogger($this);
-        $this->sessionCache = Mage::helper('Exactor_Core_SessionCache/');
+        $this->sessionCache = Mage::helper('ZzzzzExactor_Core_SessionCache/');
     }
 
     /**
@@ -34,8 +34,8 @@ class MagentoExactorCallback extends IExactorPluginCallback{
     function loadTransactionInfo($shoppingCartTrnId)
     {
         $this->logger->trace('called', 'loadTransactionInfo');
-        /** @var Exactor_Core_Model_ExactorTransaction $exatorTransaction  */
-        $exatorTransaction = Mage::getModel('Exactor_Core_Model_ExactorTransaction');
+        /** @var ZzzzzExactor_Core_Model_ExactorTransaction $exatorTransaction  */
+        $exatorTransaction = Mage::getModel('ZzzzzExactor_Core_Model_ExactorTransaction');
         $exatorTransaction = $exatorTransaction->getCollection()->addFilter("OrderID",$shoppingCartTrnId)->getFirstItem();
         if (!$exatorTransaction->hasData()) return null;
         // Populating common object with DB dat
@@ -61,11 +61,11 @@ class MagentoExactorCallback extends IExactorPluginCallback{
     function saveTransactionInfo(ExactorTransactionInfo $transactionInfo, $requestKey)
     {
         $this->logger->trace('called', 'saveTransactionInfo');
-        /** @var Exactor_Core_Model_ExactorTransaction $exatorTransaction  */
-        $exatorTransaction = Mage::getModel('Exactor_Core_Model_ExactorTransaction');
+        /** @var ZzzzzExactor_Core_Model_ExactorTransaction $exatorTransaction  */
+        $exatorTransaction = Mage::getModel('ZzzzzExactor_Core_Model_ExactorTransaction');
         $exatorTransaction = $exatorTransaction->getCollection()
                 ->addFilter("OrderID",$transactionInfo->getShoppingCartTrnId())->getFirstItem();
-        if (!$exatorTransaction->hasData()) $exatorTransaction = Mage::getModel('Exactor_Core_Model_ExactorTransaction');
+        if (!$exatorTransaction->hasData()) $exatorTransaction = Mage::getModel('ZzzzzExactor_Core_Model_ExactorTransaction');
 
         $transactionInfo->setSignature($requestKey);
         $exatorTransaction->setCommited($transactionInfo->getIsCommited());
