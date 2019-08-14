@@ -1,0 +1,16 @@
+{
+    "name": "OpenMageModuleFostering/Mage_Exactor_Tax",
+    "type": "magento-module",
+    "license": "OSL-v3.0",
+    "homepage": "",
+    "description": "Calculate, file, and remit sales taxes seamlessly through Magento using the Exactor Sales Tax Compliance Service.",
+    "authors": [
+    {
+        "name": "Exactor, Inc.",
+        "email": "support@exactor.com"
+    }
+],
+    "suggest": {
+        "magento-hackathon/magento-composer-installer": "*"
+    }
+}

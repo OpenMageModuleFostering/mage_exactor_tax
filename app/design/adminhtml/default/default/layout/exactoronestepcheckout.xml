@@ -1,0 +1,7 @@
+<layoutUpdate>
+    <default>
+        <reference name="head">
+            <action method="addJs"><script>exactor/exactor.js</script></action>
+        </reference>
+    </default>
+</layoutUpdate>

@@ -1,0 +1,293 @@
+<?php
+	/**
+	* Magento
+	*
+	* NOTICE OF LICENSE
+	*
+	* This source file is subject to the Academic Free License (AFL 3.0)
+	* that is bundled with this package in the file LICENSE_AFL.txt.
+	* It is also available through the world-wide-web at this URL:
+	* http://opensource.org/licenses/afl-3.0.php
+	* If you did not receive a copy of the license and are unable to
+	* obtain it through the world-wide-web, please send an email
+	* to license@magentocommerce.com so we can send you a copy immediately.
+	*
+	* DISCLAIMER
+	*
+	* Do not edit or add to this file if you wish to upgrade Magento to newer
+	* versions in the future. If you wish to customize Magento for your
+	* needs please refer to http://www.magentocommerce.com for more information.
+	*
+	* @category   design_default
+	* @package    Exactor
+	* @copyright  Copyright (c) 2008 Irubin Consulting Inc. DBA Varien (http://www.varien.com)
+	* @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+	*/
+	
+	#get the country list from country_collection resource model
+	$country_lists = Mage::getResourceModel('directory/country_collection')->load()->toOptionArray();
+	#get the region list from region_collection resource model
+	$region_lists = Mage::getResourceModel('directory/region_collection')->load()->toOptionArray();
+    $this->loadData();
+    $pluginVersion = $this->getData('pluginVersion');
+    $accountSettings = $this->getData('accountSettings');
+    $websites = Mage::app()->getWebsites(true);
+    if ($accountSettings->getID() == null){
+        $accountSettings->setStoreViewID($this->getStoreViewId());
+    }
+?>
+<div class="content-header">
+    <table cellspacing="0" class="grid-header">
+        <tr>
+            <td><h3><?php echo $this->__('Exactor Account')?></h3></td>
+             <td><div style='float:right'><h3>Plugin Version: <?php echo $pluginVersion ?></h3></div></td>
+        </tr>
+    </table>
+</div>
+<div class="entry-edit">
+     <form id="edit_form" name="edit_form" method="post" action="<?php echo $this->getUrl('*/*/post', array('_secure' => true)); ?>">
+		<input name="form_key" type="hidden" value="<?php echo Mage::getSingleton('core/session')->getFormKey() ?>" />
+        <input name="exactordetailsform[ID]" type="hidden" value="<?php echo $accountSettings->getID(); ?>" />
+        <input name="exactordetailsform[StoreViewID]" type="hidden" value="<?php echo $accountSettings->getStoreViewID(); ?>" />
+        <?php if ($websites): ?>
+            <h4 class="icon-head head-edit-form fieldset-legend"><?php echo $this->__('Magento Store View')?></h4>
+            <fieldset id="magento-store">
+                <table cellspacing="0" class="form-list" width="100%">
+                    <tr>
+                        <td class="label"><?php echo $this->__('Choose Store View')?> <span class="required">*</span></td>
+                        <td  class="input-ele">
+                            <select name="exactordetailsform[StoreViewID]" id="StoreViewID" onchange="return switchStore(this);">
+                                <?php foreach (Mage::app()->getStores() as $store): ?>
+                                    <option value="<?php echo $store->getId() ?>"<?php if(
+                                        ($accountSettings->getStoreViewID() != null && $store->getId() == $accountSettings->getStoreViewID())
+                                        || ( $accountSettings->getStoreViewID() == null && $store->getId() == Mage::app()->getDefaultStoreView()->getId() )): ?> selected="selected"<?php endif; ?>>&nbsp;&nbsp;&nbsp;&nbsp;<?php echo $store->getName() ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                    </tr>
+                </table>
+            </fieldset>
+        <?php endif; ?>
+        <h4 class="icon-head head-edit-form fieldset-legend"><?php echo $this->__('Exactor Account Information')?></h4>
+        <fieldset id="exactor-account">
+            <table cellspacing="0" class="form-list" width="100%">
+                <tr>
+                    <td class="label"><?php echo $this->__('Account #')?> <span class="required">*</span></td>
+                    <td class="input-ele">
+                        <input class="input-text validate-digits required-entry" name="exactordetailsform[MerchantID]" value="<?php echo $accountSettings->getMerchantID() ;?>" />
+                        <div style="font-weight: bold; margin-left: 15px; display: inline;">
+                            (<a href="https://merchant.exactor.com/account/signup/application" target="_blank">Click Here</a> to sign up for an Exactor Account)
+                        </div>
+                    </td>
+                </tr>
+				<tr>
+                    <td class="label"><?php echo $this->__('User Name')?> <span class="required">*</span></td>
+                    <td class="input-ele"><input class="input-text required-entry" name="exactordetailsform[UserID]" value="<?php echo $accountSettings->getUserID();?>"/></td>
+                </tr>
+                <tr>
+                    <td class="label" colspan="2" style="font-weight: bold;"><?php echo $this->__('Business Address') ?></td>
+                </tr>
+                <tr>
+                    <td class="label"><?php echo $this->__('Full Name') ?> <span class="required">*</span></td>
+                    <td class="input-ele"><input class="input-text validate-length required-entry" maxlength="128" name="exactordetailsform[FullName]" value="<?php echo $accountSettings->getFullName();?>"/></td>
+                </tr>
+				<tr>
+                    <td class="label"><?php echo $this->__('Street 1')?> <span class="required">*</span></td>
+                    <td class="input-ele">
+                        <input class="input-text validate-length validate-street required-entry" maxlength="128" name="exactordetailsform[Street1]" value="<?php echo $accountSettings->getStreet1();?>"/>
+                    </td>
+                </tr>
+				<tr>
+                    <td class="label"><?php echo $this->__('Street 2')?> </td>
+                    <td class="input-ele"><input class="input-text validate-length" name="exactordetailsform[Street2]" maxlength="128" value="<?php echo $accountSettings->getStreet2();?>"/></td>
+                </tr>
+				<tr>
+                    <td class="label"><?php echo $this->__('City')?> <span class="required">*</span></td>
+                    <td class="input-ele"><input class="input-text validate-length required-entry" maxlength="128" name="exactordetailsform[City]" value="<?php echo $accountSettings->getCity();?>"/></td>
+                </tr>
+                <tr>
+                    <td class="label"><?php echo $this->__('State Or Province')?> <span class="required">*</span></td>
+					<td class="input-ele">
+                        <select id="StateOrProvince_Id"  class="required-entry" name="exactordetailsform[StateOrProvinceId]" STYLE="width: 250px">
+							<option value=""><?php echo $this->__('Please select region, state or province') ?></option>
+						</select>
+                        <script type="text/javascript">
+                       //<![CDATA[
+                           $('StateOrProvince_Id').setAttribute('defaultValue',  "<?php echo $accountSettings->getStateOrProvince() ?>");
+                       //]]>
+                       </script>
+                        <input id="StateOrProvince" class="input-text validate-length"
+                               value="<?php echo $accountSettings->getStateOrProvince() ?>"
+                               maxlength="128" name="exactordetailsform[StateOrProvince]" />
+					</td>
+                </tr>
+				<tr>
+                    <td class="label"><?php echo $this->__('Postal Code')?> <span class="required">*</span></td>
+                    <td class="input-ele"><input class="input-text validate-zip required-entry" name="exactordetailsform[PostalCode]" value="<?php echo $accountSettings->getPostalCode();?>"/></td>
+                </tr>
+                <tr>
+                    <td class="label"><?php echo $this->__('Country')?> <span class="required">*</span></td>
+					<td class="input-ele">
+						<select id="Country" class="required-entry" name="exactordetailsform[Country]" STYLE="width: 250px">
+							<?php foreach ($country_lists as $country): ?>
+								<option value=<?php echo $country["value"] ?>
+									<?php if(($country["value"]==$accountSettings->getCountry()) || (trim($country["value"])=="US" && trim($accountSettings->getCountry())=="")): ?>
+										selected="true"<?php endif ?>><?php echo $country["label"]?>
+									</option>
+							<?php endforeach ?>
+						</select>
+					</td>
+                </tr>
+            </table>
+        </fieldset>
+        <h4 class="icon-head head-edit-form fieldset-legend"><?php echo $this->__('Plugin Settings')?></h4>
+        <fieldset>
+            <table cellspacing="0" class="form-list" width="100%">
+                <tr>
+                    <td class="label" style="width: 280px"><?php echo $this->__('Do shipping charges include handling fees')?> <span class="required">*</span></td>
+					<td class="input-ele">
+                        <select id="ShippingCharges" class="required-entry" name="exactordetailsform[ShippingCharges]" STYLE="width: 135px">
+							<option value="1" <?php if($accountSettings->isShippingIncludeHandling()): ?>selected="selected"<?php endif ?>>YES</option>
+							<option value="0" <?php if(!$accountSettings->isShippingIncludeHandling()): ?>selected="selected"<?php endif ?>>NO</option>
+						</select>
+					</td>
+                </tr>
+				<tr>
+                    <td class="label" style="width: 280px"><?php echo $this->__('Commit taxes on')?> <span class="required">*</span></td>
+					<td class="input-ele">
+                        <select id="CommitOption" class="required-entry" name="exactordetailsform[CommitOption]" style="width: 135px">
+                            <?php
+                                $commitOptions = $accountSettings->getCommitOptionsList();
+                                foreach($commitOptions as $key => $description){
+                            ?>
+                                    <option value="<?php echo $key ?>" <?php if($key==$accountSettings->getCommitOption()): ?>selected="selected"<?php endif ?>><?php echo $description ?></option>
+                            <?php } ?>
+						</select>
+					</td>
+                </tr>
+				<tr>
+                    <td class="label" style="width: 280px"><?php echo $this->__('Enable Entity Exemptions')?> <span class="required">*</span></td>
+					<td class="input-ele">
+                        <select id="EntityExemptions" class="required-entry" name="exactordetailsform[EntityExemptions]" STYLE="width: 135px">
+							<option value="1" <?php if($accountSettings->getExemptionsSupported()): ?>selected="selected"<?php endif ?>>YES</option>
+							<option value="0" <?php if(!$accountSettings->getExemptionsSupported()): ?>selected="selected"<?php endif ?>>NO</option>
+						</select>
+					</td>
+                </tr>
+                <tr>
+                    <td class="label" STYLE="width: 280px"><?php echo $this->__('Source of SKU Information')?> <span class="required">*</span></td>
+					<td class="input-ele">
+                        <select id="SourceofSKU" class="required-entry" name="exactordetailsform[SourceofSKU]" style="width: 135px">
+                            <?php
+                            foreach($accountSettings->getSkuSourcesList() as $key => $description):
+                            ?>
+                                <option value="<?php echo $key ?>" <?php if($accountSettings->getSourceOfSKU()==$key): ?>selected="selected"<?php endif ?> class="">
+                                    <?php echo $description ?>
+                                </option>
+                            <?php endforeach ?>
+						</select>
+					</td>
+                </tr>
+            </table>
+        </fieldset>
+     </form>
+</div>
+
+<div>
+    <span class="required">*</span> Required fields
+</div>
+
+<div class="content-header">
+    <table cellspacing="0" class="grid-header">
+        <tr>
+            <td class="a-left">
+                <button id="saveBtn" onclick="editForm.submit();" class="scalable save" type="button"><span>Save Data</span></button>
+            </td>
+        </tr>
+    </table>
+</div>
+
+<script type="text/javascript">
+    new RegionUpdater('Country', 'StateOrProvince', 'StateOrProvince_Id',
+        <?php echo $this->helper('directory')->getRegionJson() ?>);
+    
+    var editForm = new varienForm('edit_form');
+
+    editForm._submit = function(){
+        if(this.submitUrl){
+            $(this.formId).action = this.submitUrl;
+        }
+        showLoading();
+        $(this.formId).submit();
+    }
+
+	function showLoading() {
+		var saveBtn = document.getElementById("saveBtn");
+            try {
+                var x,y;
+                if (self.innerHeight)
+                {
+                    // all except Explorer
+                    x = self.innerWidth;
+                    y = self.innerHeight;
+                }
+                else if (document.documentElement && document.documentElement.clientHeight)
+                {
+                    // Explorer 6 Strict Mode
+                    x = document.documentElement.clientWidth;
+                    y = document.documentElement.clientHeight;
+                }
+                else if (document.body)
+                {
+                    // other Explorers
+                    x = document.body.clientWidth;
+                    y = document.body.clientHeight;
+                }
+
+                var top = (y/2) - 60;
+                    var left = (x/2) - 200;
+
+                $('loading-mask').style.visibility = 'visible';
+                $('loading-mask').style.display = "block";
+                $('loading-mask').style.left = left + "px"
+                $('loading-mask').style.top = top + "px";
+                $('loading-mask').style.width = "400px";
+                $('loading-mask').style.zIndex = 2;
+                //Element.show('loading-mask');
+
+
+                var loaderArea = $$('#html-body .wrapper')[0];
+                Element.clonePosition($('loading-mask'), $(loaderArea), {offsetLeft:-2});
+                //toggleSelectsUnderBlock($('loading-mask'), false);
+                Element.show('loading-mask');
+                setLoaderPosition();
+            } catch (err) {
+                // In IE, it will occur error, so I have to re-do the show code again. Do ask me why...
+                //var loaderArea = $$('#html-body .wrapper')[0];
+                //Element.clonePosition($('loading-mask'), $(loaderArea), {offsetLeft:-2});
+                //toggleSelectsUnderBlock($('loading-mask'), false);
+                //Element.show('loading-mask');
+                //setLoaderPosition();
+            }
+	}
+
+	String.prototype.trim = function()
+	{
+        return this.replace(/(^\s*)|(\s*$)/g, "");
+	}
+
+    function switchStore(obj){
+        var storeParam = obj.value ? 'storeview/'+obj.value + '/' : '';
+        if(obj.switchParams){
+            storeParam+= obj.switchParams;
+        }
+        if(confirm("<?php echo $this->__('Please confirm site switching. All data that hasn\'t been saved will be lost.') ?>")){
+            setLocation('<?php echo $this->getUrl('*/*/index', array('_secure' => true)); ?>key/<?php echo $this->getRequest()->getParam('key') ?>/'+storeParam);
+            return true;
+        }
+        else {
+            obj.value = '<?php echo $this->getStoreId() ?>';
+        }
+        return false;
+    }
+</script>
