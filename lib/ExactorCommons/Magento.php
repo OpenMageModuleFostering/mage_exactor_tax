@@ -1,18 +1,30 @@
 <?php
+
 /**
  * User: LOGICIFY\corvis
  * Date: 4/20/12
  * Time: 10:39 AM
  */
- 
-class MagentoLogger extends IExactorLogger{
-    protected function doOutput($body)
+class MagentoLogger extends IExactorLogger
+{
+    private static $severity_mapping = array(
+        self::TRACE => Zend_Log::DEBUG,
+        self::DEBUG => Zend_Log::DEBUG,
+        self::INFO => Zend_Log::INFO,
+        self::ERROR => Zend_Log::ERR
+    );
+
+    protected function doOutput($message, $callee, $level, $time)
     {
-        echo Mage::Log($body);
+        if ($callee) {
+            $callee = ' - ' . $callee;
+        }
+        Mage::Log($this->getLoggerName() . $callee . ': ' . $message, self::$severity_mapping[$level], "exactor.log");
     }
 }
 
-class MagentoExactorCallback extends IExactorPluginCallback{
+class MagentoExactorCallback extends IExactorPluginCallback
+{
 
     private $logger;
     /**
@@ -20,7 +32,8 @@ class MagentoExactorCallback extends IExactorPluginCallback{
      */
     private $sessionCache;
 
-    public function __construct(){
+    public function __construct()
+    {
         $this->logger = ExactorLoggingFactory::getInstance()->getLogger($this);
         $this->sessionCache = Mage::helper('ZzzzzExactor_Core_SessionCache/');
     }
@@ -34,9 +47,9 @@ class MagentoExactorCallback extends IExactorPluginCallback{
     function loadTransactionInfo($shoppingCartTrnId)
     {
         $this->logger->trace('called', 'loadTransactionInfo');
-        /** @var ZzzzzExactor_Core_Model_ExactorTransaction $exatorTransaction  */
+        /** @var ZzzzzExactor_Core_Model_ExactorTransaction $exatorTransaction */
         $exatorTransaction = Mage::getModel('ZzzzzExactor_Core_Model_ExactorTransaction');
-        $exatorTransaction = $exatorTransaction->getCollection()->addFilter("OrderID",$shoppingCartTrnId)->getFirstItem();
+        $exatorTransaction = $exatorTransaction->getCollection()->addFilter("OrderID", $shoppingCartTrnId)->getFirstItem();
         if (!$exatorTransaction->hasData()) return null;
         // Populating common object with DB dat
         $transactionInfo = new ExactorTransactionInfo();
@@ -61,10 +74,10 @@ class MagentoExactorCallback extends IExactorPluginCallback{
     function saveTransactionInfo(ExactorTransactionInfo $transactionInfo, $requestKey)
     {
         $this->logger->trace('called', 'saveTransactionInfo');
-        /** @var ZzzzzExactor_Core_Model_ExactorTransaction $exatorTransaction  */
+        /** @var ZzzzzExactor_Core_Model_ExactorTransaction $exatorTransaction */
         $exatorTransaction = Mage::getModel('ZzzzzExactor_Core_Model_ExactorTransaction');
         $exatorTransaction = $exatorTransaction->getCollection()
-                ->addFilter("OrderID",$transactionInfo->getShoppingCartTrnId())->getFirstItem();
+            ->addFilter("OrderID", $transactionInfo->getShoppingCartTrnId())->getFirstItem();
         if (!$exatorTransaction->hasData()) $exatorTransaction = Mage::getModel('ZzzzzExactor_Core_Model_ExactorTransaction');
 
         $transactionInfo->setSignature($requestKey);

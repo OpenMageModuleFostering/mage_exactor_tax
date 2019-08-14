@@ -252,6 +252,9 @@ class ZzzzzExactor_Tax_Model_Sales_Total_Quote_Tax extends Mage_Sales_Model_Quot
      */
     private function applyTaxPercent($quoteItem, $resultItem)
     {
+        if (!$resultItem->getTaxInfo()) {
+            return;
+        }
         $taxPercent = 0;
         foreach ($resultItem->getTaxInfo() as $taxInfo) {
             $taxPercent += $taxInfo->getTaxRate();

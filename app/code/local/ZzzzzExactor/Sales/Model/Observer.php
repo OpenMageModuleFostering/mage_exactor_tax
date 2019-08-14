@@ -357,6 +357,9 @@ class ZzzzzExactor_Sales_Model_Observer
      */
     private function applyTaxPercent($quoteItem, $resultItem)
     {
+        if (!$resultItem->getTaxInfo()) {
+            return;
+        }
         $taxPercent = 0;
         foreach ($resultItem->getTaxInfo() as $taxInfo) {
             $taxPercent += $taxInfo->getTaxRate();

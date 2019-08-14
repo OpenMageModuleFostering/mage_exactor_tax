@@ -436,12 +436,13 @@ class ZzzzzExactor_Tax_Helper_Mapping extends Mage_Core_Helper_Abstract
         if (!$this->isDiscountExempt($magentoItem)) {
             $this->applyDiscountToLineItem($lineItem, $magentoItem->getDiscountAmount());
         }
-        // Check if it is bundle or groped product
+        // Check if it is bundle or grouped product
         $product = $magentoItem->getProduct();
         if (empty($product) && $magentoItem->getOrderItem() != null) {
             $product = $magentoItem->getOrderItem()->getProduct();
         }
-        if (empty($product) && $magentoItem->getProductId() != null) {
+        $isSfcDropshipCommerceModuleEnabled = $this->isSfcDropshipCommerceModuleEnabled();
+        if ($magentoItem->getProductId() != null && (empty($product) || $isSfcDropshipCommerceModuleEnabled)) {
             $product = Mage::getModel('catalog/product')
                 ->setStoreId($magentoItem->getStoreId())
                 ->load($magentoItem->getProductId());
@@ -453,6 +454,11 @@ class ZzzzzExactor_Tax_Helper_Mapping extends Mage_Core_Helper_Abstract
                 return null; // Doesn't show it in the Exactor transaction.
             }
         }
+
+        if ($isSfcDropshipCommerceModuleEnabled) {
+            $lineItem->setShipFrom($this->buildExactorAddressForProductShipFrom($product));
+        }
+
         return $lineItem;
     }
 
@@ -969,4 +975,51 @@ class ZzzzzExactor_Tax_Helper_Mapping extends Mage_Core_Helper_Abstract
         return $this->isAddessFullyPopulated($invoice->getShipTo());
         //&& $this->isAddessFullyPopulated($invoice->getBillTo());
     }
+
+    //region SFC_DropshipCommerce related methods
+    /**
+     * Designed to be used in getSupplierShipFromAddress only. Represents supplier address per request cache.
+     * @var array {supplierId(int):shipFrom(AddressType)}
+     */
+    private $supplierCache = array();
+
+    private function getSupplierShipFromAddress($supplierId)
+    {
+        if (array_key_exists($supplierId, $this->supplierCache)) {
+            return $this->supplierCache[$supplierId];
+        }
+        /** @var SFC_DropshipCommerce_Model_Supplier $supplier */
+        $supplier = Mage::getModel('dropshipcommerce/supplier')->load($supplierId);
+        $shipFrom = $this->buildExactorAddressForSupplier($supplier);
+        $this->supplierCache[$supplierId] = $shipFrom;
+        return $shipFrom;
+    }
+
+    /**
+     * @param Mage_Catalog_Model_Product $product
+     * @return AddressType|null
+     */
+    private function buildExactorAddressForProductShipFrom($product)
+    {
+        if ($product == null) return null;
+        $exactorAddress = new AddressType();
+        $exactorAddress->setFullName($product->getData('ship_from_attention'));
+        $exactorAddress->setStreet1($product->getData('ship_from_address_1'));
+        $exactorAddress->setStreet2($product->getData('ship_from_address_2'));
+        $exactorAddress->setCity($product->getData('ship_from_city'));
+        $exactorAddress->setStateOrProvince($product->getData('ship_from_state'));
+        $exactorAddress->setPostalCode($product->getData('ship_from_postal_code'));
+        $exactorAddress->setCountry($product->getData('ship_from_country'));
+        if (!$exactorAddress->hasData()) return null;
+        return $exactorAddress;
+    }
+
+    /**
+     * @return bool true if SFC_DropshipCommerce module enabled, false otherwise
+     */
+    private function isSfcDropshipCommerceModuleEnabled()
+    {
+        return Mage::helper('core')->isModuleEnabled('SFC_DropshipCommerce');
+    }
+    //endregion
 }

@@ -6,7 +6,8 @@
  * Time: 5:33 PM
  */
 
-abstract class IExactorLogger{
+abstract class IExactorLogger
+{
 
     const TRACE = 0;
     const DEBUG = 1;
@@ -15,32 +16,48 @@ abstract class IExactorLogger{
 
     private $logLevel = self::INFO;
     private $loggerName = 'root';
-    protected abstract function doOutput($body);
 
-    public function log($message, $callee=null, $level=self::DEBUG){
+    protected abstract function doOutput($message, $callee, $level, $time);
+
+    public function log($message, $callee = null, $level = self::DEBUG)
+    {
 
         // Check if we should just skip this message on our Log Level
         if ($level < $this->getLogLevel()) return;
 
-        if ($callee==null)
+        if ($callee == null)
             $callee = '';
-        $time = new DateTime();
-        $this->doOutput('[' . $time->format('Y-m-d H:i:s') . '] ' . $this->getLoggerName() . ' - ' . $callee . ': ' . $message . "\n") ;
+        $this->doOutput($message, $callee, $level, new DateTime());
     }
 
-    public function debug($msg, $callee=null){
+    /**
+     * @param $message string
+     * @param $callee string
+     * @param $time DateTime
+     * @return string in default log format
+     */
+    protected function format($message, $callee, $time)
+    {
+        return '[' . $time->format('Y-m-d H:i:s') . '] ' . $this->getLoggerName() . ' - ' . $callee . ': ' . $message . "\n";
+    }
+
+    public function debug($msg, $callee = null)
+    {
         $this->log($msg, $callee, self::DEBUG);
     }
 
-    public function trace($msg, $callee=null){
+    public function trace($msg, $callee = null)
+    {
         $this->log($msg, $callee, self::TRACE);
     }
 
-    public function info($msg, $callee=null){
+    public function info($msg, $callee = null)
+    {
         $this->log($msg, $callee, self::INFO);
     }
 
-    public function error($msg, $callee=null){
+    public function error($msg, $callee = null)
+    {
         $this->log($msg, $callee, self::ERROR);
     }
 
@@ -56,7 +73,7 @@ abstract class IExactorLogger{
 
     public function setLoggerName($loggerName)
     {
-        if (!is_string($loggerName)){ // This is not class name
+        if (!is_string($loggerName)) { // This is not class name
             $loggerName = get_class($loggerName); // Get class name
         }
         $this->loggerName = $loggerName;
@@ -68,12 +85,12 @@ abstract class IExactorLogger{
     }
 }
 
-class ExactorFakeLogger extends IExactorLogger{
-    protected function doOutput($body)
+class ExactorFakeLogger extends IExactorLogger
+{
+    protected function doOutput($message, $callee, $level, $time)
     {
         // Just do nothing
     }
-
 }
 
 class ExactorLoggingFactory{
