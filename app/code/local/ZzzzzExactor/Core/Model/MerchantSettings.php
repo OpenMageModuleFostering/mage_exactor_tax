@@ -23,7 +23,6 @@ class ZzzzzExactor_Core_Model_MerchantSettings extends Mage_Core_Model_Abstract
     protected $skuSources = array(self::SKU_SOURCE_SKU_FIELD => 'SKU Field',
                                   self::SKU_SOURCE_ATTRIBUTE_NAME => 'Attribute Set Name',
                                   self::SKU_SOURCE_TAX_CLASS => 'Tax Class',
-                                  self::SKU_SOURCE_PRODUCT_CATEGORY => 'Product Category',
                                   self::SKU_SOURCE_NONE => 'None'
                             );
 

@@ -40,8 +40,7 @@ class ZzzzzExactor_Tax_Helper_Mapping extends Mage_Core_Helper_Abstract
 
     const ATTRIBUTE_NAME_EXEMPTION = 'taxvat';
 
-    const MAX_SKU_CODE_LENGTH = 32;
-
+    const MAX_DIGIT_SKU_CODE_LENGTH = 19;
 
     private $logger;
 
@@ -107,8 +106,9 @@ class ZzzzzExactor_Tax_Helper_Mapping extends Mage_Core_Helper_Abstract
         $fullName = trim($address->getName()); //trim($this->buildFullName($address->getFirstname(), $address->getLastname(), $address->getMiddlename()));
         if (strlen($fullName) > 0)
             $exactorAddress->setFullName($fullName);
-        if ($address->getStreetFull() != null)
-            $exactorAddress->setStreet1($address->getStreetFull());
+        if ($address->getStreet1() != null)
+            $exactorAddress->setStreet1($address->getStreet1());
+        $exactorAddress->setStreet2($address->getStreet2());
         $exactorAddress->setCity($address->getCity());
         $exactorAddress->setStateOrProvince($address->getRegionCode());
         $exactorAddress->setCountry($address->getCountry());
@@ -183,7 +183,10 @@ class ZzzzzExactor_Tax_Helper_Mapping extends Mage_Core_Helper_Abstract
                 if ($taxClass == null) $sku = ''; else $sku = $taxClass->getClassName();
                 break;
         }
-        return substr($sku, self::PRICE_TYPE_DYNAMIC, self::MAX_SKU_CODE_LENGTH); // Max length for SKU is 32 characters
+        if (ctype_digit($sku)) {
+            return substr($sku, 0, ZzzzzExactor_Tax_Helper_Mapping::MAX_DIGIT_SKU_CODE_LENGTH);
+        }
+        return $sku;
     }
 
     private function isUSPSShipping($methodName)
